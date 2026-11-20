@@ -17,9 +17,24 @@ export interface RenderContext {
   compensationWarning?: string;
   holdProgress: number;
   levelStatus: LevelStatus;
+  videoElement?: HTMLVideoElement | null;
 }
 
-// MediaPipe 骨骼連線清單
+function drawRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r);
+  } else {
+    // 降級相容不支援 roundRect 之 Android 舊版瀏覽器
+    ctx.rect(x, y, w, h);
+  }
+}
 const POSE_CONNECTIONS: [number, number][] = [
   // 軀幹
   [11, 12],
@@ -45,11 +60,16 @@ const POSE_CONNECTIONS: [number, number][] = [
 ];
 
 export function renderHUD(rc: RenderContext) {
-  const { canvas, ctx, landmarks, currentAngle, peakAngle, activeSide, isKneeStraight, isSupportLegFlat, holdProgress } = rc;
+  const { canvas, ctx, landmarks, currentAngle, peakAngle, activeSide, isKneeStraight, isSupportLegFlat, holdProgress, videoElement } = rc;
   const width = canvas.width;
   const height = canvas.height;
 
-  ctx.clearRect(0, 0, width, height);
+  // 核心改進：若視訊已就緒，直接在 Canvas 底層繪製視訊幀，徹底杜絕 Android 手機層疊黑畫面！
+  if (videoElement && videoElement.readyState >= 2) {
+    ctx.drawImage(videoElement, 0, 0, width, height);
+  } else {
+    ctx.clearRect(0, 0, width, height);
+  }
 
   if (!landmarks || landmarks.length < 33) {
     // 尚未偵測到人體時，在畫面中央繪製輔助取景框
@@ -155,7 +175,7 @@ export function renderHUD(rc: RenderContext) {
 
       ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
       ctx.beginPath();
-      ctx.roundRect(hx - 40, hy - 45, 80, 36, 8);
+      drawRoundRect(ctx, hx - 40, hy - 45, 80, 36, 8);
       ctx.fill();
       ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 1.5;
@@ -199,14 +219,14 @@ function drawHoldProgress(ctx: CanvasRenderingContext2D, w: number, progress: nu
   // 背景
   ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
   ctx.beginPath();
-  ctx.roundRect(x, y, barW, barH, 7);
+  drawRoundRect(ctx, x, y, barW, barH, 7);
   ctx.fill();
 
   // 進度
   const fillW = (barW * progress) / 100;
   ctx.fillStyle = '#10b981';
   ctx.beginPath();
-  ctx.roundRect(x, y, fillW, barH, 7);
+  drawRoundRect(ctx, x, y, fillW, barH, 7);
   ctx.fill();
 
   ctx.fillStyle = '#ffffff';
@@ -223,7 +243,7 @@ function drawCompensationAlert(ctx: CanvasRenderingContext2D, w: number, msg: st
   const y = 110;
 
   ctx.beginPath();
-  ctx.roundRect(x, y, boxW, boxH, 8);
+  drawRoundRect(ctx, x, y, boxW, boxH, 8);
   ctx.fill();
 
   ctx.fillStyle = '#ffffff';

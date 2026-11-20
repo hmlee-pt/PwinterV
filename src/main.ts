@@ -56,48 +56,91 @@ let isDemoMode = false;
 let lastLandmarks: NormalizedLandmark[] | null = null;
 
 /**
- * 初始化相機串流
+ * 初始化相機串流 (強化相容 Android / iOS 多鏡頭與底層 WebRTC 視訊播放)
  */
-async function startCamera() {
+async function startCamera(): Promise<boolean> {
   if (stream) {
     stream.getTracks().forEach((track) => track.stop());
+    stream = null;
   }
 
-  try {
-    statusPill.textContent = '正在啟動相機...';
-    const constraints: MediaStreamConstraints = {
-      video: {
-        facingMode: currentFacingMode,
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      },
+  videoEl.muted = true;
+  videoEl.playsInline = true;
+  videoEl.setAttribute('autoplay', '');
+  videoEl.setAttribute('muted', '');
+  videoEl.setAttribute('playsinline', 'true');
+  videoEl.setAttribute('webkit-playsinline', 'true');
+
+  statusPill.textContent = '正在啟動相機...請在手機彈窗點選「允許」';
+
+  const tryGetStream = async (constraints: MediaStreamConstraints): Promise<MediaStream | null> => {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (e) {
+      console.warn('嘗試相機模式失敗:', constraints, e);
+      return null;
+    }
+  };
+
+  // 1. 優先嘗試後置相機 (手持施測者視角)
+  let newStream: MediaStream | null = await tryGetStream({
+    video: {
+      facingMode: { ideal: currentFacingMode },
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    },
+    audio: false,
+  });
+
+  // 2. 降級嘗試僅指定 facingMode
+  if (!newStream) {
+    newStream = await tryGetStream({
+      video: { facingMode: currentFacingMode },
       audio: false,
+    });
+  }
+
+  // 3. 降級嘗試通用預設相機 (所有 Android / PC 保證支援)
+  if (!newStream) {
+    newStream = await tryGetStream({
+      video: true,
+      audio: false,
+    });
+  }
+
+  if (!newStream) {
+    statusPill.textContent = '⚠️ 無法取得相機權限（請檢查手機設定或點擊「模擬展示」）';
+    return false;
+  }
+
+  stream = newStream;
+  videoEl.srcObject = stream;
+
+  // 關鍵：等待視訊中繼資料載入完成，確保 Android 瀏覽器正常開始播放畫面
+  await new Promise<void>((resolve) => {
+    const onPlayReady = () => {
+      videoEl.play().catch((err) => console.warn('視訊 play() 略過:', err));
+      resolve();
     };
 
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-    videoEl.srcObject = stream;
-    await videoEl.play();
-
-    // 啟動手機電子水平儀感測
-    await inclinometerSensor.requestPermission();
-
-    statusPill.textContent = '相機已就緒，請對準受測者側面';
-    resizeCanvas();
-    return true;
-  } catch (err) {
-    console.warn('後置相機存取失敗，嘗試切換預設鏡頭:', err);
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      videoEl.srcObject = stream;
-      await videoEl.play();
-      resizeCanvas();
-      return true;
-    } catch (e2) {
-      console.error('無法啟動相機:', e2);
-      statusPill.textContent = '⚠️ 無法取得相機權限（可點擊「模擬展示」體驗）';
-      return false;
+    if (videoEl.readyState >= 1) {
+      onPlayReady();
+    } else {
+      videoEl.onloadedmetadata = onPlayReady;
+      setTimeout(onPlayReady, 1200);
     }
+  });
+
+  // 啟動手機電子水平儀感測
+  try {
+    await inclinometerSensor.requestPermission();
+  } catch (err) {
+    console.warn('水平儀授權略過:', err);
   }
+
+  statusPill.textContent = '✅ 相機已就緒！請將鏡頭對準受測者側面';
+  resizeCanvas();
+  return true;
 }
 
 function resizeCanvas() {
@@ -240,6 +283,7 @@ function tick() {
     compensationWarning: snap.compensationWarning,
     holdProgress: snap.holdProgress,
     levelStatus: level,
+    videoElement: isDemoMode ? null : videoEl,
   };
 
   renderHUD(renderContext);
@@ -471,7 +515,8 @@ async function bootstrap() {
     statusPill.textContent = msg;
   });
 
-  statusPill.textContent = '系統就緒！點擊「開始檢測」啟動相機';
+  // 自動嘗試啟動相機，讓使用者一進入網頁即可看見鏡頭畫面
+  await startCamera();
 }
 
 bootstrap();

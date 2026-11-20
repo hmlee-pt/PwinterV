@@ -1,5 +1,14 @@
 # 專案變更歷程 (CHANGELOG)
 
+## [v1.0.2] - 2026-11-20
+### 修復 (Fixes)
+- **相機畫面黑屏問題修復**：
+  - 改採直接將視訊幀繪製於 Canvas 底層（`ctx.drawImage(videoElement)`），徹底杜絕 Android 手機上 `<video>` 與透明 `<canvas>` 硬體層疊合成失敗導致的黑畫面。
+  - 重構相機初始化流程，加入三層漸進式降級約束 (`ideal: environment` ➔ `facingMode` ➔ `video: true`)。
+  - 加入 `videoEl.muted = true`、`videoEl.playsInline = true` 與 `loadedmetadata` 異步監聽，確保 Android Chrome 視訊串流順利解碼播放。
+  - 進入網頁自動嘗試啟動相機預覽，省去手動啟動步驟。
+  - 加入 `drawRoundRect` 降級繪圖函數，相容舊版 Android WebView。
+
 ## [v1.0.1] - 2026-11-20
 ### 修復 (Fixes)
 - 修復 PWA `manifest.json` 與 `sw.js` 離線快取路徑（改為 `./icon.svg` 相對路徑）。

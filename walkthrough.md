@@ -75,7 +75,12 @@
 - `dist/assets/index-*.js` (147.86 kB gzip: 47.73 kB)
 - `dist/assets/index-*.css` (5.53 kB)
 
-### 4. Windows CMD 批次檔編碼修復 (v1.0.0 Hotfix)
+### 5. Android 相機黑畫面問題修復 (v1.0.2)
+- **問題根因**：部分 Android 手機（尤其高解析度 OLED / 硬體加速環境）在複合 `<video>` 與透明 `<canvas>` 時，瀏覽器硬體層疊無法正確將視訊訊號傳遞至透明圖層底下，造成黑畫面；且部分 Android Chrome 嚴格要求在呼叫 `play()` 前須觸發 `loadedmetadata` 與設定 `muted=true`。
+- **修復方案**：
+  1. 改採雙重渲染保證：`renderHUD` 在 Canvas 底層直接調用 `ctx.drawImage(videoElement)`，確保畫面與骨架繪製在同一圖層，100% 杜絕黑畫面。
+  2. 加入三級相機約束自動降級機制（後置鏡頭 ➔ 泛用鏡頭 ➔ 預設相機）。
+  3. 進入網頁自動觸發相機啟動，並以 `loadedmetadata` 異步確保視訊解碼就緒。
 - **問題根因**：Windows 原生 `cmd.exe` 在繁體中文環境 (預設 Big5/CP950) 解析內嵌繁體中文字串之 UTF-8 `.bat` 時，會發生經典的字元位移截斷 Bug，將 `echo` 誤判為 `'ho'`，導致指令無法辨識。
 - **修復方案**：將 `切換版本.bat` 重構為純 ASCII 啟動器，橋接調用 `tools/version-tool.ps1` 並自動繞過 ExecutionPolicy，全面以 PowerShell UTF-8 引擎渲染高對比彩色選單，徹底解決亂碼與無限迴圈問題。
 
