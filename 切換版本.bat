@@ -24,15 +24,17 @@ echo  2. 切換到指定歷史版本 (檢視模式)
 echo  3. 切回最新開發主線 (master / main)
 echo  4. 以指定版本建立新修復分支
 echo  5. 啟動本機開發伺服器 (npm run dev)
+echo  6. 一鍵推送到 GitHub 遠端倉庫 (git push origin main --tags)
 echo  0. 離開
 echo ------------------------------------------------------
-set /p choice=請輸入選項 (0-5): 
+set /p choice=請輸入選項 (0-6): 
 
 if "%choice%"=="1" goto LIST_TAGS
 if "%choice%"=="2" goto CHECKOUT_TAG
 if "%choice%"=="3" goto CHECKOUT_MAIN
 if "%choice%"=="4" goto CREATE_BRANCH
 if "%choice%"=="5" goto RUN_DEV
+if "%choice%"=="6" goto PUSH_GITHUB
 if "%choice%"=="0" exit /b
 goto MENU
 
@@ -80,5 +82,15 @@ goto MENU
 cls
 echo [啟動本機開發伺服器]
 call npm.cmd run dev
+pause
+goto MENU
+
+:PUSH_GITHUB
+cls
+echo [推送到 GitHub 遠端倉庫]
+echo 正在推送至 https://github.com/hmlee-pt/PwinterV.git ...
+git push -u origin main --tags
+echo.
+echo 若顯示成功，即表示所有檔案與標籤已同步至 GitHub！
 pause
 goto MENU
