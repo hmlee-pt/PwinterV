@@ -77,10 +77,14 @@ async function startCamera(): Promise<boolean> {
 
   statusPill.textContent = '正在啟動相機...請在手機彈窗點選「允許」';
 
+  let lastCameraErrorName = '';
   const tryGetStream = async (constraints: MediaStreamConstraints): Promise<MediaStream | null> => {
     try {
       return await navigator.mediaDevices.getUserMedia(constraints);
-    } catch (e) {
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'name' in e) {
+        lastCameraErrorName = String((e as { name: string }).name);
+      }
       console.warn('嘗試相機模式失敗:', constraints, e);
       return null;
     }
@@ -113,8 +117,41 @@ async function startCamera(): Promise<boolean> {
   }
 
   if (!newStream) {
-    statusPill.textContent = '⚠️ 無法取得相機權限（請檢查手機設定允許相機）';
-    cameraPromptOverlay?.classList.remove('hidden');
+    const errName = lastCameraErrorName;
+    let guideHtml = `
+      <div class="prompt-icon">🔒</div>
+      <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px; color: #f87171;">相機權限已被手機瀏覽器封鎖</h3>
+      <div style="font-size: 12px; color: #cbd5e1; line-height: 1.6; text-align: left; background: rgba(0,0,0,0.4); padding: 10px 14px; border-radius: 10px; margin: 8px 0;">
+        <p><strong>如何手動解鎖（只需 10 秒）：</strong></p>
+        <p>1. 點擊網址列左側的 <strong>🔒 鎖頭圖示</strong>（或調整圖示）。</p>
+        <p>2. 點選 <strong>「權限」</strong> 或 <strong>「網站設定」</strong>。</p>
+        <p>3. 找到 <strong>「相機」</strong>，將其改為 <strong>「允許」</strong>。</p>
+        <p>4. 點擊下方按鈕重新啟動！</p>
+      </div>
+      <button id="btn-retry-camera" class="btn-primary" style="margin-top: 8px; width: 100%;">
+        🔄 我已解鎖，重新啟動相機
+      </button>
+    `;
+
+    if (errName === 'NotReadableError') {
+      guideHtml = `
+        <div class="prompt-icon">📷</div>
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px; color: #fbbf24;">相機正被其他應用程式佔用</h3>
+        <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">請先滑掉關閉手機相機 App、LINE 或視訊軟體，然後重試。</p>
+        <button id="btn-retry-camera" class="btn-primary" style="width: 100%;">🔄 重新連線相機</button>
+      `;
+    }
+
+    if (cameraPromptOverlay) {
+      cameraPromptOverlay.innerHTML = guideHtml;
+      cameraPromptOverlay.classList.remove('hidden');
+      document.getElementById('btn-retry-camera')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.location.reload();
+      });
+    }
+
+    statusPill.textContent = '⚠️ 請依畫面指引解除相機封鎖';
     return false;
   }
 
