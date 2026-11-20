@@ -75,10 +75,9 @@
 - `dist/assets/index-*.js` (147.86 kB gzip: 47.73 kB)
 - `dist/assets/index-*.css` (5.53 kB)
 
-### 3. 資安檢查 (Security Check)
-- **零影像上傳**：相機訊號完全保留在前端記憶體與 WebAssembly 實例中，絕無伺服器上傳風險。
-- **XSS 防護**：受測者姓名於渲染時透過字元跳脫函數嚴格過濾。
-- **安全協定要求**：遵循手機瀏覽器鏡頭調用之 HTTPS / localhost 限制規範。
+### 4. Windows CMD 批次檔編碼修復 (v1.0.0 Hotfix)
+- **問題根因**：Windows 原生 `cmd.exe` 在繁體中文環境 (預設 Big5/CP950) 解析內嵌繁體中文字串之 UTF-8 `.bat` 時，會發生經典的字元位移截斷 Bug，將 `echo` 誤判為 `'ho'`，導致指令無法辨識。
+- **修復方案**：將 `切換版本.bat` 重構為純 ASCII 啟動器，橋接調用 `tools/version-tool.ps1` 並自動繞過 ExecutionPolicy，全面以 PowerShell UTF-8 引擎渲染高對比彩色選單，徹底解決亂碼與無限迴圈問題。
 
 ---
 
