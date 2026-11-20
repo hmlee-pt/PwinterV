@@ -1,0 +1,19 @@
+{
+  "name": "運動員防受傷檢測系統 - FMS Mobility",
+  "short_name": "FMS Mobility",
+  "description": "運用手機鏡頭與端側 AI 電腦視覺，量測關節活動度 (ROM) 並評估運動受傷風險",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "icons": [
+    {
+      "src": "./public/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#090d16" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>運動員防受傷檢測系統 - Athletic Mobility PWA</title>
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- 頂部 HUD 狀態列 -->
+      <header class="top-bar">
+        <div class="brand-badge">
+          <span>⚡ FMS Mobility</span>
+        </div>
+
+        <!-- 電子水平儀 (施測者手持指引) -->
+        <div id="level-indicator" class="level-badge" title="手機垂直水平指示器">
+          <span class="level-dot" id="level-dot"></span>
+          <span id="level-text">水平儀校準中</span>
+        </div>
+
+        <div class="top-actions">
+          <button id="btn-sound-toggle" class="icon-btn" title="切換語音提示">
+            <span id="sound-icon">🔊</span>
+          </button>
+          <button id="btn-camera-flip" class="icon-btn" title="翻轉鏡頭 (前後鏡頭)">
+            <span>🔄</span>
+          </button>
+          <button id="btn-history" class="icon-btn" title="歷史評估紀錄">
+            <span>📋</span>
+          </button>
+          <button id="btn-help" class="icon-btn" title="施測操作指引">
+            <span>❓</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- 相機預覽與 AI 骨架畫布 -->
+      <main class="camera-container">
+        <video id="webcam" playsinline autoplay muted></video>
+        <canvas id="output-canvas"></canvas>
+      </main>
+
+      <!-- 底部 HUD 控制台 -->
+      <footer class="bottom-bar">
+        <!-- 狀態引導橫幅 -->
+        <div id="status-pill" class="status-pill">
+          請點擊「開始檢測」啟動相機
+        </div>
+
+        <!-- 即時角度儀表板 -->
+        <div class="angle-dashboard">
+          <div class="angle-card" id="card-right">
+            <span class="side-label">右腿活動度 (ASLR)</span>
+            <span class="angle-val" id="val-right">--°</span>
+          </div>
+          <div class="angle-card" id="card-asymmetry">
+            <span class="side-label">左右不對稱差</span>
+            <span class="angle-val" id="val-asymmetry">--%</span>
+          </div>
+          <div class="angle-card" id="card-left">
+            <span class="side-label">左腿活動度 (ASLR)</span>
+            <span class="angle-val" id="val-left">--°</span>
+          </div>
+        </div>
+
+        <!-- 動作操作按鈕列 -->
+        <div class="action-controls">
+          <button id="btn-demo" class="btn-secondary" title="無需真人即可預覽檢測流程">
+            🎮 模擬展示
+          </button>
+
+          <button id="btn-main-action" class="btn-primary">
+            ▶️ 開始檢測
+          </button>
+
+          <!-- 施測者手動鎖定按鈕 (快門) -->
+          <button id="btn-shutter" class="btn-shutter" style="display: none;" title="施測者直接鎖定當前角度峰值">
+            <span>📸</span>
+            <span>鎖定</span>
+          </button>
+        </div>
+      </footer>
+
+      <!-- 報告彈窗 (Mobility & Injury Risk Modal) -->
+      <div id="modal-report" class="modal-overlay">
+        <div class="modal-card">
+          <div class="report-header">
+            <div>
+              <h2 style="font-size: 18px; font-weight: 700;">防受傷與活動度評估報告</h2>
+              <p style="font-size: 12px; color: var(--text-secondary);" id="report-time"></p>
+            </div>
+            <span id="report-risk-badge" class="risk-badge LOW">低風險</span>
+          </div>
+
+          <div class="comparison-grid">
+            <div class="comp-box">
+              <div style="font-size: 12px; color: var(--text-secondary);">右腿髖屈曲</div>
+              <div class="val" id="rep-right-angle">82°</div>
+              <div style="font-size: 11px; color: var(--brand-green); margin-top: 2px;">正常標準 (≥75°)</div>
+            </div>
+            <div class="comp-box">
+              <div style="font-size: 12px; color: var(--text-secondary);">左腿髖屈曲</div>
+              <div class="val" id="rep-left-angle">85°</div>
+              <div style="font-size: 11px; color: var(--brand-green); margin-top: 2px;">正常標準 (≥75°)</div>
+            </div>
+          </div>
+
+          <div class="asymmetry-meter">
+            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+              <span>左右不對稱比率 (Asymmetry)</span>
+              <strong id="rep-asymmetry-val" style="color: var(--brand-cyan);">3.5%</strong>
+            </div>
+            <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.4;" id="rep-description"></p>
+          </div>
+
+          <div>
+            <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">💡 專屬伸展與防傷建議：</h4>
+            <div id="rep-recommendations" class="recommendations-list"></div>
+          </div>
+
+          <!-- 運動員名稱紀錄 -->
+          <div style="display: flex; gap: 8px;">
+            <input
+              type="text"
+              id="input-athlete-name"
+              placeholder="輸入受測者姓名 (例: 王小明)"
+              style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; color: #fff; font-size: 14px;"
+            />
+            <button id="btn-save-record" class="btn-primary" style="padding: 10px 18px; font-size: 14px;">
+              💾 儲存紀錄
+            </button>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 6px;">
+            <button id="btn-close-report" class="btn-secondary" style="flex: 1;">關閉</button>
+            <button id="btn-restart-test" class="btn-primary" style="flex: 1;">🔄 重新檢測</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 歷史紀錄彈窗 -->
+      <div id="modal-history" class="modal-overlay">
+        <div class="modal-card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="font-size: 18px; font-weight: 700;">歷史受測紀錄 (本機儲存)</h2>
+            <button id="btn-clear-history" style="background: none; border: none; color: var(--brand-red); font-size: 12px; cursor: pointer;">
+              清空紀錄
+            </button>
+          </div>
+          <div id="history-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto;">
+            <!-- 動態插入紀錄項目 -->
+          </div>
+          <button id="btn-close-history" class="btn-secondary" style="width: 100%;">返回</button>
+        </div>
+      </div>
+
+      <!-- 操作指引彈窗 -->
+      <div id="modal-help" class="modal-overlay">
+        <div class="modal-card">
+          <h2 style="font-size: 18px; font-weight: 700;">施測者手持指引</h2>
+          <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; display: flex; flex-direction: column; gap: 12px;">
+            <p><strong>1. 受測者準備：</strong>仰臥平躺於瑜伽墊上，雙腿併攏伸直，雙手置於兩側。</p>
+            <p><strong>2. 施測者手持視角：</strong>蹲姿或站姿於受測者側面（正側面視角），手機保持垂直平視，頂部水平儀顯示「綠燈」為最佳角度。</p>
+            <p><strong>3. 檢測流程：</strong>點擊「開始檢測」，依語音提示引導受測者先緩慢抬起右腿至極限（維持直膝），停頓 1.5 秒即自動鎖定（或施測者手動按下「📸 鎖定」）。接著換左腿。</p>
+            <p><strong>4. 防傷指標：</strong>左右角度差 &gt;15% 為高受傷風險族群，系統將自動給出客製化伸展處方。</p>
+          </div>
+          <button id="btn-close-help" class="btn-primary" style="width: 100%;">我知道了，開始實測</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
