@@ -1,5 +1,10 @@
 # 專案變更歷程 (CHANGELOG)
 
+## [v1.0.1] - 2026-11-20
+### 修復 (Fixes)
+- 修復 PWA `manifest.json` 與 `sw.js` 離線快取路徑（改為 `./icon.svg` 相對路徑）。
+- 指引切換 GitHub Pages 部署模式為 **GitHub Actions**，避免瀏覽器直接請求未編譯之 TypeScript 檔案。
+
 ## [v1.0.0] - 2026-11-20
 
 ### 新增功能 (Features)
