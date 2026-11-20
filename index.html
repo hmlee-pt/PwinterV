@@ -44,9 +44,21 @@
       </header>
 
       <!-- 相機預覽與 AI 骨架畫布 -->
-      <main class="camera-container">
+      <main class="camera-container" id="camera-container">
         <video id="webcam" playsinline autoplay muted></video>
         <canvas id="output-canvas"></canvas>
+
+        <!-- 相機啟動觸控引導 (滿足 Android 瀏覽器相機必須由使用者觸摸手勢觸發的安全規範) -->
+        <div id="camera-prompt-overlay" class="camera-prompt-overlay">
+          <div class="prompt-icon">📷</div>
+          <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 4px;">點擊開啟相機</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.4;">
+            請點擊此處並在手機跳出視窗時選擇「允許」
+          </p>
+          <button id="btn-start-camera-now" class="btn-primary" style="margin-top: 14px;">
+            🚀 點擊啟動鏡頭
+          </button>
+        </div>
       </main>
 
       <!-- 底部 HUD 控制台 -->

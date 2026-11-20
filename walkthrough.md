@@ -75,7 +75,13 @@
 - `dist/assets/index-*.js` (147.86 kB gzip: 47.73 kB)
 - `dist/assets/index-*.css` (5.53 kB)
 
-### 5. Android 相機黑畫面問題修復 (v1.0.2)
+### 6. Android 手機螢幕切角與手勢相機啟動修復 (v1.0.3)
+- **問題根因**：
+  1. `100vh` 在 Android Chrome 中會計算包含虛擬導航鍵與手勢條的高度，導致底部按鈕被系統底欄硬生生切掉約 40~60px。
+  2. Android Chrome 76+ 安全政策要求：未獲永久授權前，`getUserMedia` 必須由使用者點擊或觸摸手勢觸發；若由代碼自動載入會被靜默攔截。加上舊架構等待 10MB MediaPipe 模型下載完才啟動相機，導致相機畫面延遲或黑屏。
+- **修復方案**：
+  1. 全面重構移動端 Viewport，採用 `100dvh` 與緊湊型 HUD 設計，縮減底部高度 40%，按鍵 100% 完整露出於可視範圍。
+  2. 新增居中互動式「📷 點擊開啟鏡頭」引導，提供合規之 User Gesture 觸發點，並將 AI 模型改為背景平行非同步載入，相機秒開。
 - **問題根因**：部分 Android 手機（尤其高解析度 OLED / 硬體加速環境）在複合 `<video>` 與透明 `<canvas>` 時，瀏覽器硬體層疊無法正確將視訊訊號傳遞至透明圖層底下，造成黑畫面；且部分 Android Chrome 嚴格要求在呼叫 `play()` 前須觸發 `loadedmetadata` 與設定 `muted=true`。
 - **修復方案**：
   1. 改採雙重渲染保證：`renderHUD` 在 Canvas 底層直接調用 `ctx.drawImage(videoElement)`，確保畫面與骨架繪製在同一圖層，100% 杜絕黑畫面。

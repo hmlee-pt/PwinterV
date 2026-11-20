@@ -48,6 +48,10 @@ const btnCloseHelp = document.getElementById('btn-close-help')!;
 const btnSaveRecord = document.getElementById('btn-save-record')!;
 const inputAthleteName = document.getElementById('input-athlete-name') as HTMLInputElement;
 
+// 相機引導遮罩元件
+const cameraPromptOverlay = document.getElementById('camera-prompt-overlay') as HTMLElement;
+const btnStartCameraNow = document.getElementById('btn-start-camera-now') as HTMLButtonElement;
+
 // 執行階段變數
 let stream: MediaStream | null = null;
 let currentFacingMode: 'environment' | 'user' = 'environment';
@@ -109,12 +113,14 @@ async function startCamera(): Promise<boolean> {
   }
 
   if (!newStream) {
-    statusPill.textContent = '⚠️ 無法取得相機權限（請檢查手機設定或點擊「模擬展示」）';
+    statusPill.textContent = '⚠️ 無法取得相機權限（請檢查手機設定允許相機）';
+    cameraPromptOverlay?.classList.remove('hidden');
     return false;
   }
 
   stream = newStream;
   videoEl.srcObject = stream;
+  cameraPromptOverlay?.classList.add('hidden');
 
   // 關鍵：等待視訊中繼資料載入完成，確保 Android 瀏覽器正常開始播放畫面
   await new Promise<void>((resolve) => {
@@ -297,6 +303,7 @@ function tick() {
  */
 function runDemoSimulation() {
   isDemoMode = true;
+  cameraPromptOverlay?.classList.add('hidden');
   statusPill.textContent = '🎮 正在運行示範模擬模式...';
 
   stateManager.startAssessment();
@@ -367,6 +374,20 @@ function runDemoSimulation() {
 }
 
 // ----------------- 事件綁定 -----------------
+
+// 相機引導遮罩點擊啟用
+if (btnStartCameraNow) {
+  btnStartCameraNow.addEventListener('click', (e) => {
+    e.stopPropagation();
+    startCamera();
+  });
+}
+
+if (cameraPromptOverlay) {
+  cameraPromptOverlay.addEventListener('click', () => {
+    startCamera();
+  });
+}
 
 // 主要動作按鈕 (開始 / 終止 / 重新檢測)
 btnMainAction.addEventListener('click', async () => {
@@ -506,17 +527,28 @@ if ('serviceWorker' in navigator) {
 
 // 啟動主流程
 async function bootstrap() {
-  statusPill.textContent = '正在啟動 AI 骨架引擎...';
+  statusPill.textContent = '相機系統準備中...';
   isRunning = true;
   requestAnimationFrame(tick);
 
-  // 初始化 MediaPipe
-  await poseDetector.initialize((msg) => {
-    statusPill.textContent = msg;
-  });
+  // 1. 優先嘗試非阻塞啟動相機 (若已有權限則瞬間秒開)
+  startCamera();
 
-  // 自動嘗試啟動相機，讓使用者一進入網頁即可看見鏡頭畫面
-  await startCamera();
+  // 2. 平行非同步載入 MediaPipe 姿態模型 (避免 10MB 下載阻塞相機畫面顯示)
+  poseDetector
+    .initialize((msg) => {
+      if (stateManager.getSnapshot().step === 'IDLE' && !stream) {
+        statusPill.textContent = msg;
+      }
+    })
+    .then((ready) => {
+      if (ready && stateManager.getSnapshot().step === 'IDLE') {
+        statusPill.textContent = '✅ AI 骨架引擎就緒！點擊「開始檢測」進行評估';
+      }
+    })
+    .catch((err) => {
+      console.warn('MediaPipe 初始化略過:', err);
+    });
 }
 
 bootstrap();
