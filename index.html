@@ -19,6 +19,7 @@
       <header class="top-bar">
         <div class="brand-badge">
           <span>⚡ FMS Mobility</span>
+          <span class="version-tag">v1.0.7</span>
         </div>
 
         <!-- 電子水平儀 (施測者手持指引) -->
@@ -225,6 +226,14 @@
               • 屈曲角度 60°~74°：活動度受限 (2分 / 中風險)<br />
               • 屈曲角度 &lt; 60°：活動度嚴重不足 (1分 / 高風險)<br />
               • <strong>左右不對稱差 &gt; 15%</strong>：受傷風險增加 2~3 倍！
+            </div>
+
+            <!-- 版本資訊與強制清快取按鈕 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 2px;">
+              <span style="font-size: 12px; color: #94a3b8;">目前軟體版本：<strong style="color: #38bdf8;">v1.0.7</strong></span>
+              <button id="btn-force-refresh" class="btn-secondary" style="font-size: 12px; padding: 6px 12px; border-radius: 14px;">
+                🔄 清除快取並重整
+              </button>
             </div>
           </div>
           <button id="btn-close-help" class="btn-primary" style="width: 100%; justify-content: center; font-size: 16px; padding: 12px;">我知道了，開始實測</button>

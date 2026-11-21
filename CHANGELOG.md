@@ -1,5 +1,14 @@
 # 專案變更歷程 (CHANGELOG)
 
+## [v1.0.7] - 2026-11-21
+### 新增與改進 (Features & Improvements)
+- **畫面直觀顯示版本號標籤 (Version Badge Display)**：
+  - 左上角品牌區塊新增藍色高對比版本標籤 `v1.0.7`，使用者與施測者在手機上一眼即可判斷是否為最新版本。
+  - 「❓ 施測者操作與拍攝指引」彈窗底部同步標註目前版本號。
+- **一鍵強制清除快取並重整 (One-Click Cache Buster)**：
+  - 於操作指南中新增「🔄 清除快取並重整」功能鍵，點擊後自動清除 Cache Storage、解除舊 Service Worker 註冊，並帶隨機時間戳重整，徹底解決 PWA 舊快取卡滯問題。
+  - Service Worker 快取名稱推進為 `fms-mobility-cache-v3`。
+
 ## [v1.0.6] - 2026-11-21
 ### 新增與改進 (Features & Improvements)
 - **橫向與直立雙模式自適應佈局 (Landscape / Portrait Responsive UI)**：

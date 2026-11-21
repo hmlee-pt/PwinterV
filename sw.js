@@ -2,7 +2,7 @@
  * PWA Service Worker (離線快取支援與 Network First 網路優先策略)
  */
 
-const CACHE_NAME = 'fms-mobility-cache-v2';
+const CACHE_NAME = 'fms-mobility-cache-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

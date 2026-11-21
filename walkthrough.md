@@ -148,3 +148,23 @@
 ### 4. 驗證與構建
 - `npm run build`：成功編譯 TypeScript 與打包 Vite assets。
 - `npm test`：9 項核心演算法測試全數通過。
+
+---
+
+## 🚀 v1.0.7 更新成果：介面版本號標示與一鍵強制清除快取功能
+
+### 1. 介面直接顯示版本號標籤
+- **左上角品牌區**：直接顯示 `⚡ FMS Mobility v1.0.7`（帶有高對比藍色膠囊標籤），無論在直立或橫向模式下，都能一眼確認目前載入的程式碼版本。
+- **操作指南彈窗**：底層同步標註 `目前軟體版本：v1.0.7`。
+
+### 2. 內建一鍵強制清除快取重整按鈕 (One-Click Cache Buster)
+- 在操作指南彈窗中新增「🔄 清除快取並重整」功能鍵。
+- 點擊後由前端程式透過 JavaScript 自動執行：
+  1. `caches.delete()` 清空 Cache Storage 所有快取項目。
+  2. `navigator.serviceWorker.getRegistrations()` 解除所有已註冊之舊 Service Worker。
+  3. 自動將頁面導向至帶有隨機時間戳參數之全新 URL (`?forceReload=timestamp`)，徹底強迫瀏覽器重新向伺服器拉取最新檔案。
+- Service Worker 快取名稱推進為 `fms-mobility-cache-v3`。
+
+### 3. 驗證與發布
+- `npm run build`：生產環境 bundle 構建成功。
+- `npm test`：單元測試 100% 通過。

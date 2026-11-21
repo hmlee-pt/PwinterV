@@ -485,6 +485,28 @@ btnCloseHelp.addEventListener('click', () => {
   modalHelp.classList.remove('active');
 });
 
+// 一鍵清除快取並強制重整
+const btnForceRefresh = document.getElementById('btn-force-refresh');
+if (btnForceRefresh) {
+  btnForceRefresh.addEventListener('click', async () => {
+    btnForceRefresh.textContent = '⏳ 清理快取中...';
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch (e) {
+      console.warn('快取清理錯誤:', e);
+    }
+    // 跳轉至帶有隨機 timestamp 參數之全新網址強制獲取最新版
+    window.location.href = window.location.pathname + '?forceReload=' + Date.now();
+  });
+}
+
 // 報告彈窗關閉與重測
 btnCloseReport.addEventListener('click', () => {
   modalReport.classList.remove('active');
