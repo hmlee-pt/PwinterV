@@ -16,6 +16,16 @@ const videoEl = document.getElementById('webcam') as HTMLVideoElement;
 const canvasEl = document.getElementById('output-canvas') as HTMLCanvasElement;
 const ctx = canvasEl.getContext('2d')!;
 
+// 畫面快照擷取回呼 (供狀態機在鎖定最高點時取得即時照片)
+stateManager.onCaptureRequest = () => {
+  try {
+    return canvasEl.toDataURL('image/jpeg', 0.85);
+  } catch (err) {
+    console.warn('畫面截圖失敗:', err);
+    return '';
+  }
+};
+
 // 狀態與儀表板元素
 const statusPill = document.getElementById('status-pill')!;
 const levelDot = document.getElementById('level-dot')!;
@@ -61,9 +71,11 @@ const btnPwaRefresh = document.getElementById('btn-pwa-refresh') as HTMLButtonEl
 const lineNoticeOverlay = document.getElementById('line-notice-overlay');
 const btnOpenChrome = document.getElementById('btn-open-chrome');
 
-// 語音教練引導狀態變數
+// 語音教練引導與自動檢測狀態變數
 let hasSpokenReadyPrompt = false;
 let lastTiltWarningTime = 0;
+let autoStartEligibleStartTime = 0;
+let hasAutoStarted = false;
 
 // 執行階段變數
 let stream: MediaStream | null = null;
@@ -242,22 +254,27 @@ stateManager.subscribe((snapshot: StateSnapshot) => {
     valAsymmetry.style.color = 'var(--brand-cyan)';
   }
 
-  // 高亮當前測量側
-  if (snapshot.step === 'MEASURING_RIGHT') {
-    cardRight.classList.add('active');
-    cardLeft.classList.remove('active');
-    btnShutter.style.display = 'flex';
-    btnMainAction.textContent = '⏹️ 終止檢測';
-  } else if (snapshot.step === 'MEASURING_LEFT') {
-    cardRight.classList.remove('active');
-    cardLeft.classList.add('active');
-    btnShutter.style.display = 'flex';
-    btnMainAction.textContent = '⏹️ 終止檢測';
+  // 高亮當前測量側與操作按鈕狀態更新
+  if (snapshot.step === 'MEASURING_RIGHT' || snapshot.step === 'MEASURING_LEFT' || snapshot.step === 'TRANSITION') {
+    if (snapshot.step === 'MEASURING_RIGHT') {
+      cardRight.classList.add('active');
+      cardLeft.classList.remove('active');
+    } else if (snapshot.step === 'MEASURING_LEFT') {
+      cardRight.classList.remove('active');
+      cardLeft.classList.add('active');
+    } else {
+      cardRight.classList.remove('active');
+      cardLeft.classList.remove('active');
+    }
+    btnShutter.style.display = snapshot.step === 'TRANSITION' ? 'none' : 'flex';
+    btnMainAction.textContent = '🔄 重新檢測 / 終止';
+    btnMainAction.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
   } else if (snapshot.step === 'REPORT') {
     cardRight.classList.remove('active');
     cardLeft.classList.remove('active');
     btnShutter.style.display = 'none';
     btnMainAction.textContent = '🔄 重新檢測';
+    btnMainAction.style.background = '';
     if (snapshot.report) {
       showReportModal(snapshot.report);
     }
@@ -266,6 +283,7 @@ stateManager.subscribe((snapshot: StateSnapshot) => {
     cardLeft.classList.remove('active');
     btnShutter.style.display = 'none';
     btnMainAction.textContent = '▶️ 開始檢測';
+    btnMainAction.style.background = '';
   }
 });
 
@@ -283,10 +301,30 @@ function showReportModal(rep: ReturnType<typeof stateManager.getSnapshot>['repor
   badge.textContent =
     rep.riskLevel === 'LOW' ? '✅ 低受傷風險' : rep.riskLevel === 'MODERATE' ? '⚠️ 中度受傷風險' : '🚨 高度受傷風險';
 
+  // FMS 官方評分資訊
+  const fmsScoreEl = document.getElementById('rep-fms-score');
+  const fmsDescEl = document.getElementById('rep-fms-desc');
+  if (fmsScoreEl) fmsScoreEl.textContent = `${rep.fmsTotalScore} / 3 分`;
+  if (fmsDescEl) fmsDescEl.textContent = rep.fmsScoreDescription;
+
   document.getElementById('rep-right-angle')!.textContent = `${rep.rightAngle}°`;
   document.getElementById('rep-left-angle')!.textContent = `${rep.leftAngle}°`;
   document.getElementById('rep-asymmetry-val')!.textContent = `${rep.asymmetryRatio}% (相差 ${rep.asymmetryDifference}°)`;
   document.getElementById('rep-description')!.textContent = rep.description;
+
+  // 最高點實體照片截圖憑證展示
+  const repSnapshotsSec = document.getElementById('rep-snapshots-section');
+  const imgRight = document.getElementById('img-snapshot-right') as HTMLImageElement;
+  const imgLeft = document.getElementById('img-snapshot-left') as HTMLImageElement;
+  if (repSnapshotsSec && imgRight && imgLeft) {
+    if (rep.rightSnapshotUrl || rep.leftSnapshotUrl) {
+      repSnapshotsSec.style.display = 'block';
+      if (rep.rightSnapshotUrl) imgRight.src = rep.rightSnapshotUrl;
+      if (rep.leftSnapshotUrl) imgLeft.src = rep.leftSnapshotUrl;
+    } else {
+      repSnapshotsSec.style.display = 'none';
+    }
+  }
 
   const recList = document.getElementById('rep-recommendations')!;
   recList.innerHTML = '';
@@ -324,7 +362,7 @@ function tick() {
     }
   }
 
-  // 1.2 語音教練：判斷相機視角與距離是否進入可拍攝模式
+  // 1.2 語音教練與免動手自動檢測：判斷相機視角與距離是否進入可拍攝模式
   const snap = stateManager.getSnapshot();
   if (snap.step === 'IDLE' && !isDemoMode && videoEl.readyState >= 2) {
     const isBodyInFrame =
@@ -336,15 +374,37 @@ function tick() {
     if (level.isLevel && isBodyInFrame) {
       if (!hasSpokenReadyPrompt) {
         hasSpokenReadyPrompt = true;
-        soundManager.speak('視角平正，全身已入鏡，可以開始檢測。', false);
+        soundManager.speak('視角平正，全身已入鏡。', false);
       }
-    } else if (!level.isLevel && level.deviation > 25) {
-      const now = Date.now();
-      if (now - lastTiltWarningTime > 12000) {
-        lastTiltWarningTime = now;
-        soundManager.speak('請將手機拿正平視。', false);
+
+      if (autoStartEligibleStartTime === 0) {
+        autoStartEligibleStartTime = performance.now();
+      }
+
+      const elapsed = performance.now() - autoStartEligibleStartTime;
+      if (elapsed > 1200 && !hasAutoStarted) {
+        hasAutoStarted = true;
+        soundManager.speak('檢測條件符合，三、二、一，開始檢測！', true);
+        soundManager.playCountdownTone();
+        setTimeout(() => {
+          if (stateManager.getSnapshot().step === 'IDLE') {
+            stateManager.startAssessment();
+          }
+        }, 1200);
+      }
+    } else {
+      autoStartEligibleStartTime = 0;
+      if (!level.isLevel && level.deviation > 25) {
+        const now = Date.now();
+        if (now - lastTiltWarningTime > 12000) {
+          lastTiltWarningTime = now;
+          soundManager.speak('請將手機拿正平視。', false);
+        }
       }
     }
+  } else if (snap.step !== 'IDLE') {
+    hasAutoStarted = false;
+    autoStartEligibleStartTime = 0;
   }
 
   // 2. 執行 AI 姿態辨識
@@ -475,16 +535,21 @@ if (cameraPromptOverlay) {
   });
 }
 
-// 主要動作按鈕 (開始 / 終止 / 重新檢測)
+// 主要動作按鈕 (開始 / 重新檢測 / 中途終止重來)
 btnMainAction.addEventListener('click', async () => {
+  soundManager.unlockAudio();
   const snap = stateManager.getSnapshot();
-  if (snap.step === 'IDLE' || snap.step === 'REPORT') {
+  if (snap.step === 'IDLE') {
     if (!stream) {
       await startCamera();
     }
     stateManager.startAssessment();
+  } else if (snap.step === 'REPORT') {
+    modalReport.classList.remove('active');
+    stateManager.startAssessment();
   } else {
-    stateManager.reset();
+    // 檢測中途隨時點擊重來
+    stateManager.reset(true);
   }
 });
 

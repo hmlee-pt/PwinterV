@@ -1,5 +1,27 @@
 # 專案變更歷程 (CHANGELOG)
 
+## [v1.1.0] - 2026-11-21
+### 新增與重大功能 (Major Features & Enhancements)
+- **免動手全自動檢測啟動 (Hands-free Auto Start)**：
+  - 當手機角度平正（電子水平儀亮綠燈）且受測者全身入鏡並穩定維持 1.2 秒時，系統自動啟動倒數播報：「檢測條件符合，三、二、一，開始檢測！」，並播放倒數提示音，無需施測者按按鈕即可全自動開始檢測。
+- **手機端音訊解鎖與相容性修復 (Mobile Audio Unlock & Chrome TTS Fix)**：
+  - 徹底解決手機瀏覽器因 Autoplay 政策無聲音問題：全域監聽使用者第一次觸控（Touchstart / Click），同步解鎖 Web AudioContext 與 Web Speech 語音合成引擎。
+  - 修復 Chromium Android 的語音合成引擎卡滯問題（加入 `cancel()` 與短延遲重啟機制）。
+- **最高點維持 1.5 秒自動相機快門截圖 (1.5s Hold Peak Auto-Capture)**：
+  - 受測者抬腿至最高點並維持 1.5 秒（1500ms），系統自動擷取即時 Canvas 畫面快照（Snapshot），伴隨相機實體快門音效（Shutter Tone）與成功提示音。
+  - 兩腿（右腿、左腿）最高點截圖同步記錄並於最終報告中並列展示。
+- **標準 FMS 官方計分系統 (FMS ASLR Scoring 1~3 Points)**：
+  - 依據 FMS 主動直膝抬腿 (Active Straight Leg Raise) 官方標準自動評分：
+    - $\ge 75^\circ$：3 分（功能優良，活動度正常）
+    - $60^\circ \sim 74^\circ$：2 分（活動度受限，需加強伸展）
+    - $< 60^\circ$：1 分（活動度顯著不足，拉傷高風險）
+  - 總分取兩側之最低分（$\min(\text{Right}, \text{Left})$），並於報告頂部以醒目專屬橫幅呈現。
+- **檢測中途隨時重測與終止機制 (Mid-Test Restart Button)**：
+  - 測量過程中，底部按鈕動態切換為橘色高對比 `🔄 重新檢測 / 終止`，動作不理想或受測者晃動時，點擊即可立即取消當次動作重來，並有語音告知受測者重新就位。
+- **完整兩腿自動切換與全自動退出**：
+  - 右腿完成自動播報引導換腳並倒數，左腿完成後自動退出檢測狀態，計算 FMS 分數與受傷風險，並自動彈出完整分析報告與快照照片。
+- **PWA Service Worker 快取推進至 `fms-mobility-cache-v5`**。
+
 ## [v1.0.8] - 2026-11-21
 ### 新增與改進 (Features & Improvements)
 - **頂部排版極簡化（徹底解決畫面擠壓換行）**：

@@ -36,6 +36,12 @@ export interface MobilityRiskReport {
   title: string;
   description: string;
   recommendations: string[];
+  fmsRightScore: number;
+  fmsLeftScore: number;
+  fmsTotalScore: number;
+  fmsScoreDescription: string;
+  rightSnapshotUrl?: string;
+  leftSnapshotUrl?: string;
 }
 
 /**
@@ -212,6 +218,17 @@ export function generateMobilityReport(rightAngle: number, leftAngle: number): M
       break;
   }
 
+  // FMS 官方評分計算 (3分: >=75°, 2分: 60°~74°, 1分: <60°)
+  const fmsRightScore = rightAngle >= 75 ? 3 : rightAngle >= 60 ? 2 : 1;
+  const fmsLeftScore = leftAngle >= 75 ? 3 : leftAngle >= 60 ? 2 : 1;
+  const fmsTotalScore = Math.min(fmsRightScore, fmsLeftScore);
+  const fmsScoreDescription =
+    fmsTotalScore === 3
+      ? '3 / 3 分 (優良功能，活動度正常)'
+      : fmsTotalScore === 2
+      ? '2 / 3 分 (活動度受限，需伸展)'
+      : '1 / 3 分 (活動度嚴重不足，拉傷高風險)';
+
   return {
     rightAngle,
     leftAngle,
@@ -222,5 +239,9 @@ export function generateMobilityReport(rightAngle: number, leftAngle: number): M
     title,
     description,
     recommendations,
+    fmsRightScore,
+    fmsLeftScore,
+    fmsTotalScore,
+    fmsScoreDescription,
   };
 }

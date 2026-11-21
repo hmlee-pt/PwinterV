@@ -18,7 +18,7 @@
       <!-- 頂部 HUD 狀態列 -->
       <header class="top-bar">
         <div class="brand-badge">
-          <span>⚡ v1.0.8</span>
+          <span>⚡ v1.1.0</span>
         </div>
 
         <!-- 電子水平儀 (極簡狀態呼吸指示燈) -->
@@ -153,6 +153,17 @@
             <span id="report-risk-badge" class="risk-badge LOW">低風險</span>
           </div>
 
+          <!-- FMS 官方評分專屬橫幅 -->
+          <div class="fms-score-banner">
+            <div>
+              <div style="font-size: 11px; color: #94a3b8; letter-spacing: 0.5px;">FMS 官方動作評分 (ASLR)</div>
+              <div id="rep-fms-score" style="font-size: 22px; font-weight: 800; color: #38bdf8; margin-top: 2px;">3 / 3 分</div>
+            </div>
+            <div id="rep-fms-desc" style="font-size: 12px; color: #cbd5e1; text-align: right; max-width: 55%;">
+              功能優良，活動度正常
+            </div>
+          </div>
+
           <div class="comparison-grid">
             <div class="comp-box">
               <div style="font-size: 12px; color: var(--text-secondary);">右腿髖屈曲</div>
@@ -163,6 +174,21 @@
               <div style="font-size: 12px; color: var(--text-secondary);">左腿髖屈曲</div>
               <div class="val" id="rep-left-angle">85°</div>
               <div style="font-size: 11px; color: var(--brand-green); margin-top: 2px;">正常標準 (≥75°)</div>
+            </div>
+          </div>
+
+          <!-- 實體截圖照片並列檢視 -->
+          <div id="rep-snapshots-section" style="display: none;">
+            <div style="font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">📸 最高點動作截圖憑證：</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; text-align: center;">
+                <img id="img-snapshot-right" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;" />
+                <div style="font-size: 11px; padding: 4px; color: #38bdf8; font-weight: 600;">右腿峰值截圖</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; text-align: center;">
+                <img id="img-snapshot-left" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;" />
+                <div style="font-size: 11px; padding: 4px; color: #38bdf8; font-weight: 600;">左腿峰值截圖</div>
+              </div>
             </div>
           </div>
 
@@ -253,7 +279,7 @@
 
             <!-- 版本資訊與強制清快取按鈕 -->
             <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 2px;">
-              <span style="font-size: 12px; color: #94a3b8;">目前軟體版本：<strong style="color: #38bdf8;">v1.0.8</strong></span>
+              <span style="font-size: 12px; color: #94a3b8;">目前軟體版本：<strong style="color: #38bdf8;">v1.1.0</strong></span>
               <button id="btn-force-refresh" class="btn-secondary" style="font-size: 12px; padding: 6px 12px; border-radius: 14px;">
                 🔄 清除快取並重整
               </button>

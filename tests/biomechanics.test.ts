@@ -92,3 +92,29 @@ describe('ASLR Evaluation & Compensation Detection', () => {
     }
   });
 });
+
+describe('FMS Scoring Rules (calculateFmsScore)', () => {
+  it('should award 3 points when both sides >= 75°', () => {
+    const report = generateMobilityReport(80, 85);
+    expect(report.fmsRightScore).toBe(3);
+    expect(report.fmsLeftScore).toBe(3);
+    expect(report.fmsTotalScore).toBe(3);
+    expect(report.fmsScoreDescription).toContain('優良');
+  });
+
+  it('should take the minimum score (2 points) when one side is 60°-74° and other is >= 75°', () => {
+    const report = generateMobilityReport(65, 80);
+    expect(report.fmsRightScore).toBe(2);
+    expect(report.fmsLeftScore).toBe(3);
+    expect(report.fmsTotalScore).toBe(2);
+    expect(report.fmsScoreDescription).toContain('活動度受限');
+  });
+
+  it('should award 1 point when any side is < 60°', () => {
+    const report = generateMobilityReport(55, 68);
+    expect(report.fmsRightScore).toBe(1);
+    expect(report.fmsLeftScore).toBe(2);
+    expect(report.fmsTotalScore).toBe(1);
+    expect(report.fmsScoreDescription).toContain('活動度嚴重不足');
+  });
+});

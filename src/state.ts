@@ -19,6 +19,8 @@ export interface StateSnapshot {
   peakAngle: number;
   rightPeakAngle: number | null;
   leftPeakAngle: number | null;
+  rightSnapshotUrl: string | null;
+  leftSnapshotUrl: string | null;
   isKneeStraight: boolean;
   isSupportLegFlat: boolean;
   compensationWarning?: string;
@@ -31,19 +33,24 @@ export class AssessmentStateManager {
   private step: AssessmentStep = 'IDLE';
   private rightPeakAngle: number | null = null;
   private leftPeakAngle: number | null = null;
+  private rightSnapshotUrl: string | null = null;
+  private leftSnapshotUrl: string | null = null;
   private currentAngle: number = 0;
   private peakAngle: number = 0;
   private isKneeStraight: boolean = true;
   private isSupportLegFlat: boolean = true;
   private compensationWarning?: string;
 
-  // 峰值維持鎖定計時 (Hold Timer)
+  // 峰值維持鎖定計時 (Hold Timer) - 依需求設定為 1.5 秒
   private holdStartTime: number = 0;
-  private holdThresholdMs: number = 2000; // 維持 2 秒即自動鎖定
+  private holdThresholdMs: number = 1500;
   private holdProgress: number = 0;
 
   private report: MobilityRiskReport | null = null;
-  private statusMessage: string = '請點擊開始檢測';
+  private statusMessage: string = '請將鏡頭對準受測者側面';
+
+  // 畫面截圖擷取回調 (由主視訊 Canvas 注入)
+  public onCaptureRequest?: (side: 'right' | 'left') => string;
 
   private listeners: ((snapshot: StateSnapshot) => void)[] = [];
 
@@ -67,6 +74,8 @@ export class AssessmentStateManager {
       peakAngle: this.peakAngle,
       rightPeakAngle: this.rightPeakAngle,
       leftPeakAngle: this.leftPeakAngle,
+      rightSnapshotUrl: this.rightSnapshotUrl,
+      leftSnapshotUrl: this.leftSnapshotUrl,
       isKneeStraight: this.isKneeStraight,
       isSupportLegFlat: this.isSupportLegFlat,
       compensationWarning: this.compensationWarning,
@@ -80,31 +89,38 @@ export class AssessmentStateManager {
     this.step = 'MEASURING_RIGHT';
     this.rightPeakAngle = null;
     this.leftPeakAngle = null;
+    this.rightSnapshotUrl = null;
+    this.leftSnapshotUrl = null;
     this.currentAngle = 0;
     this.peakAngle = 0;
     this.holdProgress = 0;
     this.holdStartTime = 0;
     this.report = null;
-    this.statusMessage = '【第一步：右腿】請受測者保持直膝，緩慢抬起右腿至最高點，停住兩秒鐘';
-    soundManager.speak('檢測開始。請受測者保持直膝，緩慢抬起右腿至最高點，停住兩秒鐘。', true);
+    this.statusMessage = '【第一步：右腿】請受測者保持直膝，緩慢抬起右腿至最高點，維持一秒半';
+    soundManager.speak('檢測開始。請受測者保持直膝，緩慢抬起右腿至最高點，維持一秒半。', true);
     this.notify();
   }
 
-  public reset() {
+  public reset(speakNotice = false) {
     this.step = 'IDLE';
     this.rightPeakAngle = null;
     this.leftPeakAngle = null;
+    this.rightSnapshotUrl = null;
+    this.leftSnapshotUrl = null;
     this.currentAngle = 0;
     this.peakAngle = 0;
     this.holdProgress = 0;
     this.holdStartTime = 0;
     this.report = null;
-    this.statusMessage = '請點擊開始檢測';
+    this.statusMessage = '請將鏡頭對準受測者側面';
+    if (speakNotice) {
+      soundManager.speak('檢測已取消，請準備重新開始。', true);
+    }
     this.notify();
   }
 
   /**
-   * 手動點擊拍照快門按鈕直接鎖定當前峰值 (Manual Capture by Tester)
+   * 手動點擊拍照快門按鈕直接鎖定當前峰值與截圖 (Manual Capture by Tester)
    */
   public triggerManualLock() {
     if (this.step === 'MEASURING_RIGHT') {
@@ -118,14 +134,22 @@ export class AssessmentStateManager {
 
   private lockRight(angle: number) {
     this.rightPeakAngle = Math.round(angle * 10) / 10;
-    soundManager.playSuccessTone();
+
+    // 擷取右腿畫面快照
+    if (this.onCaptureRequest) {
+      this.rightSnapshotUrl = this.onCaptureRequest('right');
+    }
+
+    soundManager.playShutterTone();
+    setTimeout(() => soundManager.playSuccessTone(), 160);
     soundManager.vibrate(150);
+
     this.step = 'TRANSITION';
-    this.statusMessage = `✅ 右腿完成：${this.rightPeakAngle}°！準備切換左腿...`;
+    this.statusMessage = `📸 右腿已拍照鎖定：${Math.round(this.rightPeakAngle)}°！準備切換左腿...`;
     soundManager.speak(`右腿鎖定成功，${Math.round(this.rightPeakAngle)}度！現在換左腳，請受測者放平，準備做左腿動作。`, true);
     this.notify();
 
-    // 2.8 秒後自動進入左腿檢測
+    // 2.5 秒後自動進入左腿檢測
     setTimeout(() => {
       if (this.step === 'TRANSITION') {
         this.step = 'MEASURING_LEFT';
@@ -133,24 +157,39 @@ export class AssessmentStateManager {
         this.peakAngle = 0;
         this.holdProgress = 0;
         this.holdStartTime = 0;
-        this.statusMessage = '【第二步：左腿】請受測者保持直膝，緩慢抬起左腿至最高點，停住兩秒鐘';
-        soundManager.speak('現在請受測者保持直膝，緩慢抬起左腿至最高點，停住兩秒鐘。', true);
+        this.statusMessage = '【第二步：左腿】請受測者保持直膝，緩慢抬起左腿至最高點，維持一秒半';
+        soundManager.speak('現在請受測者保持直膝，緩慢抬起左腿至最高點，維持一秒半。', true);
         this.notify();
       }
-    }, 2800);
+    }, 2500);
   }
 
   private lockLeft(angle: number) {
     this.leftPeakAngle = Math.round(angle * 10) / 10;
-    soundManager.playSuccessTone();
+
+    // 擷取左腿畫面快照
+    if (this.onCaptureRequest) {
+      this.leftSnapshotUrl = this.onCaptureRequest('left');
+    }
+
+    soundManager.playShutterTone();
+    setTimeout(() => soundManager.playSuccessTone(), 160);
     soundManager.vibrate([100, 50, 150]);
+
     this.step = 'REPORT';
 
     const right = this.rightPeakAngle || 0;
     const left = this.leftPeakAngle;
-    this.report = generateMobilityReport(right, left);
-    this.statusMessage = `檢測完成！右腿 ${right}° / 左腿 ${left}°`;
-    soundManager.speak(`左腿鎖定成功，${Math.round(left)}度！檢測全部完成，正在為您產出評估報告。`, true);
+    const report = generateMobilityReport(right, left);
+    report.rightSnapshotUrl = this.rightSnapshotUrl || undefined;
+    report.leftSnapshotUrl = this.leftSnapshotUrl || undefined;
+    this.report = report;
+
+    this.statusMessage = `檢測完成！FMS得分：${report.fmsTotalScore}分 (右 ${Math.round(right)}° / 左 ${Math.round(left)}°)`;
+    soundManager.speak(
+      `左腿鎖定成功，${Math.round(left)}度！檢測全部完成，FMS得分：${report.fmsTotalScore}分。正在為您產出評估報告。`,
+      true
+    );
     this.notify();
   }
 
@@ -190,7 +229,7 @@ export class AssessmentStateManager {
       this.holdProgress = Math.min(100, Math.round((elapsed / this.holdThresholdMs) * 100));
 
       if (elapsed >= this.holdThresholdMs) {
-        // 達成維持 1.5 秒，自動鎖定！
+        // 達成維持 1.5 秒，自動拍照並鎖定！
         if (this.step === 'MEASURING_RIGHT') {
           this.lockRight(this.peakAngle);
         } else if (this.step === 'MEASURING_LEFT') {
