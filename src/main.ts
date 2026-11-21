@@ -19,7 +19,7 @@ const ctx = canvasEl.getContext('2d')!;
 // 狀態與儀表板元素
 const statusPill = document.getElementById('status-pill')!;
 const levelDot = document.getElementById('level-dot')!;
-const levelText = document.getElementById('level-text')!;
+const levelText = document.getElementById('level-text');
 const valRight = document.getElementById('val-right')!;
 const valLeft = document.getElementById('val-left')!;
 const valAsymmetry = document.getElementById('val-asymmetry')!;
@@ -56,6 +56,14 @@ const btnStartCameraNow = document.getElementById('btn-start-camera-now') as HTM
 const autoRotateNotice = document.getElementById('auto-rotate-notice') as HTMLElement;
 const pwaUpdateToast = document.getElementById('pwa-update-toast') as HTMLElement;
 const btnPwaRefresh = document.getElementById('btn-pwa-refresh') as HTMLButtonElement;
+
+// LINE 瀏覽器阻擋相機提示
+const lineNoticeOverlay = document.getElementById('line-notice-overlay');
+const btnOpenChrome = document.getElementById('btn-open-chrome');
+
+// 語音教練引導狀態變數
+let hasSpokenReadyPrompt = false;
+let lastTiltWarningTime = 0;
 
 // 執行階段變數
 let stream: MediaStream | null = null;
@@ -301,7 +309,10 @@ function tick() {
   // 1. 更新電子水平儀狀態
   const level = inclinometerSensor.getStatus();
   levelDot.style.backgroundColor = level.color;
-  levelText.textContent = level.statusText;
+  levelDot.parentElement?.setAttribute('title', level.statusText);
+  if (levelText) {
+    levelText.textContent = level.statusText;
+  }
 
   // 1.1 檢測是否物理橫放但螢幕處於直向鎖定
   const isScreenPortrait = window.innerWidth < window.innerHeight;
@@ -310,6 +321,29 @@ function tick() {
       autoRotateNotice.style.display = 'block';
     } else {
       autoRotateNotice.style.display = 'none';
+    }
+  }
+
+  // 1.2 語音教練：判斷相機視角與距離是否進入可拍攝模式
+  const snap = stateManager.getSnapshot();
+  if (snap.step === 'IDLE' && !isDemoMode && videoEl.readyState >= 2) {
+    const isBodyInFrame =
+      lastLandmarks &&
+      lastLandmarks.length >= 29 &&
+      ((lastLandmarks[11]?.visibility ?? 0) > 0.45 || (lastLandmarks[12]?.visibility ?? 0) > 0.45) &&
+      ((lastLandmarks[27]?.visibility ?? 0) > 0.35 || (lastLandmarks[28]?.visibility ?? 0) > 0.35);
+
+    if (level.isLevel && isBodyInFrame) {
+      if (!hasSpokenReadyPrompt) {
+        hasSpokenReadyPrompt = true;
+        soundManager.speak('視角平正，全身已入鏡，可以開始檢測。', false);
+      }
+    } else if (!level.isLevel && level.deviation > 25) {
+      const now = Date.now();
+      if (now - lastTiltWarningTime > 12000) {
+        lastTiltWarningTime = now;
+        soundManager.speak('請將手機拿正平視。', false);
+      }
     }
   }
 
@@ -325,21 +359,21 @@ function tick() {
   }
 
   // 3. 繪製 HUD Overlay
-  const snap = stateManager.getSnapshot();
+  const currentSnap = stateManager.getSnapshot();
   const activeSide =
-    snap.step === 'MEASURING_RIGHT' ? 'right' : snap.step === 'MEASURING_LEFT' ? 'left' : null;
+    currentSnap.step === 'MEASURING_RIGHT' ? 'right' : currentSnap.step === 'MEASURING_LEFT' ? 'left' : null;
 
   const renderContext: RenderContext = {
     canvas: canvasEl,
     ctx,
     landmarks: lastLandmarks,
-    currentAngle: snap.currentAngle,
-    peakAngle: snap.peakAngle,
+    currentAngle: currentSnap.currentAngle,
+    peakAngle: currentSnap.peakAngle,
     activeSide,
-    isKneeStraight: snap.isKneeStraight,
-    isSupportLegFlat: snap.isSupportLegFlat,
-    compensationWarning: snap.compensationWarning,
-    holdProgress: snap.holdProgress,
+    isKneeStraight: currentSnap.isKneeStraight,
+    isSupportLegFlat: currentSnap.isSupportLegFlat,
+    compensationWarning: currentSnap.compensationWarning,
+    holdProgress: currentSnap.holdProgress,
     levelStatus: level,
     videoElement: isDemoMode ? null : videoEl,
   };
@@ -630,8 +664,27 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// 檢查是否處於 LINE / FB 等封閉式內建瀏覽器
+function checkLineBrowser() {
+  const ua = navigator.userAgent.toLowerCase();
+  const isLine = ua.includes('line') || ua.includes('fban') || ua.includes('fbav');
+  if (isLine && lineNoticeOverlay) {
+    lineNoticeOverlay.style.display = 'flex';
+    lineNoticeOverlay.classList.add('active');
+  }
+}
+
+if (btnOpenChrome) {
+  btnOpenChrome.addEventListener('click', () => {
+    const rawUrl = window.location.href.split('#')[0];
+    const cleanUrl = rawUrl.replace(/^https?:\/\//, '');
+    window.location.href = `intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;end`;
+  });
+}
+
 // 啟動主流程
 async function bootstrap() {
+  checkLineBrowser();
   statusPill.textContent = '相機系統準備中...';
   isRunning = true;
   requestAnimationFrame(tick);

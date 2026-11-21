@@ -18,14 +18,12 @@
       <!-- 頂部 HUD 狀態列 -->
       <header class="top-bar">
         <div class="brand-badge">
-          <span>⚡ FMS Mobility</span>
-          <span class="version-tag">v1.0.7</span>
+          <span>⚡ v1.0.8</span>
         </div>
 
-        <!-- 電子水平儀 (施測者手持指引) -->
-        <div id="level-indicator" class="level-badge" title="手機垂直水平指示器">
+        <!-- 電子水平儀 (極簡狀態呼吸指示燈) -->
+        <div id="level-indicator" class="level-badge" title="手機垂直水平指示燈">
           <span class="level-dot" id="level-dot"></span>
-          <span id="level-text">水平儀校準中</span>
         </div>
 
         <div class="top-actions">
@@ -58,6 +56,31 @@
       <div id="pwa-update-toast" class="pwa-update-toast" style="display: none;">
         <span>✨ 系統已發布新版本！</span>
         <button id="btn-pwa-refresh" class="btn-primary" style="padding: 5px 12px; font-size: 12px; border-radius: 12px;">立即更新</button>
+      </div>
+
+      <!-- LINE 內建瀏覽器阻擋相機之專屬引導彈窗 -->
+      <div id="line-notice-overlay" class="modal-overlay" style="display: none; z-index: 999;">
+        <div class="modal-card" style="text-align: center; border: 1.5px solid #f59e0b;">
+          <div style="font-size: 40px; margin-bottom: 4px;">⚠️</div>
+          <h2 style="font-size: 19px; font-weight: 800; color: #fbbf24; margin-bottom: 8px;">
+            請切換至 Chrome 瀏覽器
+          </h2>
+          <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin-bottom: 16px;">
+            您目前使用的是 <strong>LINE 內建瀏覽器</strong>。<br />
+            LINE 官方基於隱私設定，會<strong>自動封鎖相機功能</strong>導致檢測無法運作。
+          </p>
+
+          <div style="background: rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 14px; text-align: left; font-size: 13.5px; color: #e2e8f0; margin-bottom: 18px; line-height: 1.6;">
+            <strong>如何開啟相機（只需 3 秒）：</strong><br />
+            1. 點擊本畫面<strong>最右下角「⋯」</strong>（或「🔗」圖示）。<br />
+            2. 選擇<strong>「以預設瀏覽器開啟」</strong>（或「在 Chrome 中開啟」）。<br />
+            3. 在 Chrome 中點選「允許」相機即可順暢檢測！
+          </div>
+
+          <button id="btn-open-chrome" class="btn-primary" style="width: 100%; justify-content: center; font-size: 15px; padding: 12px;">
+            🚀 點擊嘗試以外部 Chrome 開啟
+          </button>
+        </div>
       </div>
 
       <!-- 相機預覽與 AI 骨架畫布 -->
@@ -216,7 +239,7 @@
               <ol style="margin: 4px 0 0 18px; padding: 0; font-size: 13.5px; color: #cbd5e1;">
                 <li><strong>準備：</strong>受測者平躺伸直放鬆，點擊「▶️ 開始檢測」。</li>
                 <li><strong>抬腿：</strong>依語音引導，緩慢抬起<strong>右腿</strong>（維持膝蓋伸直，另一腿勿曲膝離地）。</li>
-                <li><strong>鎖定：</strong>抬至最高點時<strong>靜止 1.5 秒</strong>系統將自動鎖定（亦可手動按「📸 鎖定」）；隨後換<strong>左腿</strong>重複相同動作。</li>
+                <li><strong>鎖定：</strong>抬至最高點時<strong>靜止 2 秒</strong>系統將自動鎖定（亦可手動按「📸 鎖定」）；隨後換<strong>左腿</strong>重複相同動作。</li>
               </ol>
             </div>
 
@@ -230,7 +253,7 @@
 
             <!-- 版本資訊與強制清快取按鈕 -->
             <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 2px;">
-              <span style="font-size: 12px; color: #94a3b8;">目前軟體版本：<strong style="color: #38bdf8;">v1.0.7</strong></span>
+              <span style="font-size: 12px; color: #94a3b8;">目前軟體版本：<strong style="color: #38bdf8;">v1.0.8</strong></span>
               <button id="btn-force-refresh" class="btn-secondary" style="font-size: 12px; padding: 6px 12px; border-radius: 14px;">
                 🔄 清除快取並重整
               </button>

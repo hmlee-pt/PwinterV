@@ -39,7 +39,7 @@ export class AssessmentStateManager {
 
   // 峰值維持鎖定計時 (Hold Timer)
   private holdStartTime: number = 0;
-  private holdThresholdMs: number = 1500; // 維持 1.5 秒即自動鎖定
+  private holdThresholdMs: number = 2000; // 維持 2 秒即自動鎖定
   private holdProgress: number = 0;
 
   private report: MobilityRiskReport | null = null;
@@ -85,8 +85,8 @@ export class AssessmentStateManager {
     this.holdProgress = 0;
     this.holdStartTime = 0;
     this.report = null;
-    this.statusMessage = '【第一步：右腿】請受測者伸直右腿緩慢向上抬高';
-    soundManager.speak('第一步，測量右腿。請將右腿伸直，緩慢向上抬高。', true);
+    this.statusMessage = '【第一步：右腿】請受測者保持直膝，緩慢抬起右腿至最高點，停住兩秒鐘';
+    soundManager.speak('檢測開始。請受測者保持直膝，緩慢抬起右腿至最高點，停住兩秒鐘。', true);
     this.notify();
   }
 
@@ -122,10 +122,10 @@ export class AssessmentStateManager {
     soundManager.vibrate(150);
     this.step = 'TRANSITION';
     this.statusMessage = `✅ 右腿完成：${this.rightPeakAngle}°！準備切換左腿...`;
-    soundManager.speak(`右腿完成，最高 ${this.rightPeakAngle} 度！請受測者放平，準備換左腿。`, true);
+    soundManager.speak(`右腿鎖定成功，${Math.round(this.rightPeakAngle)}度！現在換左腳，請受測者放平，準備做左腿動作。`, true);
     this.notify();
 
-    // 2.5 秒後自動進入左腿檢測
+    // 2.8 秒後自動進入左腿檢測
     setTimeout(() => {
       if (this.step === 'TRANSITION') {
         this.step = 'MEASURING_LEFT';
@@ -133,11 +133,11 @@ export class AssessmentStateManager {
         this.peakAngle = 0;
         this.holdProgress = 0;
         this.holdStartTime = 0;
-        this.statusMessage = '【第二步：左腿】請受測者伸直左腿緩慢向上抬高';
-        soundManager.speak('第二步，測量左腿。請將左腿伸直緩慢抬高。');
+        this.statusMessage = '【第二步：左腿】請受測者保持直膝，緩慢抬起左腿至最高點，停住兩秒鐘';
+        soundManager.speak('現在請受測者保持直膝，緩慢抬起左腿至最高點，停住兩秒鐘。', true);
         this.notify();
       }
-    }, 2500);
+    }, 2800);
   }
 
   private lockLeft(angle: number) {
@@ -150,7 +150,7 @@ export class AssessmentStateManager {
     const left = this.leftPeakAngle;
     this.report = generateMobilityReport(right, left);
     this.statusMessage = `檢測完成！右腿 ${right}° / 左腿 ${left}°`;
-    soundManager.speak(`檢測完成！${this.report.title}。`, true);
+    soundManager.speak(`左腿鎖定成功，${Math.round(left)}度！檢測全部完成，正在為您產出評估報告。`, true);
     this.notify();
   }
 
