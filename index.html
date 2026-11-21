@@ -43,6 +43,11 @@
         </div>
       </header>
 
+      <!-- 橫放手機引導提示條 (直立時顯示，橫放時自動隱藏) -->
+      <div id="orientation-tip" class="orientation-tip">
+        📱 推薦橫放手機 (Landscape)，退後 1.5 米全身入鏡
+      </div>
+
       <!-- 相機預覽與 AI 骨架畫布 -->
       <main class="camera-container" id="camera-container">
         <video id="webcam" playsinline autoplay muted></video>
@@ -178,14 +183,40 @@
       <!-- 操作指引彈窗 -->
       <div id="modal-help" class="modal-overlay">
         <div class="modal-card">
-          <h2 style="font-size: 18px; font-weight: 700;">施測者手持指引</h2>
-          <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; display: flex; flex-direction: column; gap: 12px;">
-            <p><strong>1. 受測者準備：</strong>仰臥平躺於瑜伽墊上，雙腿併攏伸直，雙手置於兩側。</p>
-            <p><strong>2. 施測者手持視角：</strong>蹲姿或站姿於受測者側面（正側面視角），手機保持垂直平視，頂部水平儀顯示「綠燈」為最佳角度。</p>
-            <p><strong>3. 檢測流程：</strong>點擊「開始檢測」，依語音提示引導受測者先緩慢抬起右腿至極限（維持直膝），停頓 1.5 秒即自動鎖定（或施測者手動按下「📸 鎖定」）。接著換左腿。</p>
-            <p><strong>4. 防傷指標：</strong>左右角度差 &gt;15% 為高受傷風險族群，系統將自動給出客製化伸展處方。</p>
+          <h2 style="font-size: 20px; font-weight: 800; color: #38bdf8;">📱 施測者操作與拍攝指引</h2>
+          <div style="font-size: 14px; color: #e2e8f0; line-height: 1.7; display: flex; flex-direction: column; gap: 14px;">
+            <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 12px;">
+              <h4 style="font-size: 15px; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">📸 手機方向：強烈推薦【橫向拍攝 (Landscape)】</h4>
+              <p style="margin: 0; color: #cbd5e1; font-size: 13.5px;">
+                因為受測者仰臥平躺呈長條狀，<strong>橫向握持只需退後約 1.5 ~ 2 公尺</strong>即可將「頭部到腳踝」完整納入鏡頭；若使用直立拍攝，則需要退後 3 公尺以上才能照齊全身。
+              </p>
+            </div>
+
+            <div>
+              <h4 style="font-size: 15px; font-weight: 700; color: #10b981; margin-bottom: 4px;">📐 拍攝高度與水平儀</h4>
+              <p style="margin: 0; color: #cbd5e1; font-size: 13.5px;">
+                施測者請<strong>微蹲或跪姿</strong>位於受測者正側面（與腰骨盆同高），手機鏡頭與人體平視。觀察畫面上方水平儀，維持<strong>「綠燈：鏡頭視角平正」</strong>。
+              </p>
+            </div>
+
+            <div>
+              <h4 style="font-size: 15px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">🏃‍♂️ 檢測標準三步驟</h4>
+              <ol style="margin: 4px 0 0 18px; padding: 0; font-size: 13.5px; color: #cbd5e1;">
+                <li><strong>準備：</strong>受測者平躺伸直放鬆，點擊「▶️ 開始檢測」。</li>
+                <li><strong>抬腿：</strong>依語音引導，緩慢抬起<strong>右腿</strong>（維持膝蓋伸直，另一腿勿曲膝離地）。</li>
+                <li><strong>鎖定：</strong>抬至最高點時<strong>靜止 1.5 秒</strong>系統將自動鎖定（亦可手動按「📸 鎖定」）；隨後換<strong>左腿</strong>重複相同動作。</li>
+              </ol>
+            </div>
+
+            <div style="background: rgba(255, 255, 255, 0.04); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: #94a3b8;">
+              💡 <strong>評估標準 (FMS ASLR)：</strong><br />
+              • 屈曲角度 ≥ 75°：正常優良 (3分 / 低受傷風險)<br />
+              • 屈曲角度 60°~74°：活動度受限 (2分 / 中風險)<br />
+              • 屈曲角度 &lt; 60°：活動度嚴重不足 (1分 / 高風險)<br />
+              • <strong>左右不對稱差 &gt; 15%</strong>：受傷風險增加 2~3 倍！
+            </div>
           </div>
-          <button id="btn-close-help" class="btn-primary" style="width: 100%;">我知道了，開始實測</button>
+          <button id="btn-close-help" class="btn-primary" style="width: 100%; justify-content: center; font-size: 16px; padding: 12px;">我知道了，開始實測</button>
         </div>
       </div>
     </div>

@@ -167,22 +167,22 @@ export function renderHUD(rc: RenderContext) {
       ctx.lineWidth = 6;
       ctx.stroke();
 
-      // 角度浮動標籤 Badge
+      // 角度浮動標籤 Badge (加大尺寸與清晰度)
       const badgeText = `${Math.round(currentAngle)}°`;
-      ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = 'bold 30px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
       ctx.beginPath();
-      drawRoundRect(ctx, hx - 40, hy - 45, 80, 36, 8);
+      drawRoundRect(ctx, hx - 48, hy - 50, 96, 42, 10);
       ctx.fill();
       ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.stroke();
 
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(badgeText, hx, hy - 27);
+      ctx.fillText(badgeText, hx, hy - 29);
     }
   }
 
@@ -204,50 +204,50 @@ function drawFramingGuide(ctx: CanvasRenderingContext2D, w: number, h: number) {
   ctx.strokeRect(w * 0.1, h * 0.2, w * 0.8, h * 0.6);
   ctx.setLineDash([]);
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-  ctx.font = '16px sans-serif';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.font = 'bold 18px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('請將手機平視對準受測者側面（全身入鏡）', w / 2, h / 2);
+  ctx.fillText('請將手機平視對準受測者側面（建議橫向握持，全身入鏡）', w / 2, h / 2);
 }
 
 function drawHoldProgress(ctx: CanvasRenderingContext2D, w: number, progress: number, angle: number) {
-  const barW = Math.min(300, w * 0.8);
-  const barH = 14;
+  const barW = Math.min(320, w * 0.85);
+  const barH = 16;
   const x = (w - barW) / 2;
   const y = 80;
 
   // 背景
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
   ctx.beginPath();
-  drawRoundRect(ctx, x, y, barW, barH, 7);
+  drawRoundRect(ctx, x, y, barW, barH, 8);
   ctx.fill();
 
   // 進度
   const fillW = (barW * progress) / 100;
   ctx.fillStyle = '#10b981';
   ctx.beginPath();
-  drawRoundRect(ctx, x, y, fillW, barH, 7);
+  drawRoundRect(ctx, x, y, fillW, barH, 8);
   ctx.fill();
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 14px sans-serif';
+  ctx.font = 'bold 16px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`維持中 (${Math.round(angle)}°) ... 自動鎖定 ${progress}%`, w / 2, y - 8);
+  ctx.fillText(`維持中 (${Math.round(angle)}°) ... 自動鎖定 ${progress}%`, w / 2, y - 10);
 }
 
 function drawCompensationAlert(ctx: CanvasRenderingContext2D, w: number, msg: string) {
-  ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
-  const boxW = Math.min(320, w * 0.9);
-  const boxH = 34;
+  ctx.fillStyle = 'rgba(239, 68, 68, 0.92)';
+  const boxW = Math.min(340, w * 0.9);
+  const boxH = 38;
   const x = (w - boxW) / 2;
-  const y = 110;
+  const y = 115;
 
   ctx.beginPath();
   drawRoundRect(ctx, x, y, boxW, boxH, 8);
   ctx.fill();
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 14px sans-serif';
+  ctx.font = 'bold 16px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(`⚠️ 代償警示：${msg}`, w / 2, y + boxH / 2);

@@ -1,7 +1,7 @@
 # 運動員防受傷檢測系統 (Athletic Mobility & FMS Screening PWA)
 
-> **目前版本 (Current Version)**: `v1.0.4`  
-> **最後更新日期**: 2026-11-20  
+> **目前版本 (Current Version)**: `v1.0.5`  
+> **最後更新日期**: 2026-11-21  
 > **軟體形態**: Mobile Web / PWA (漸進式網頁應用，支援手機端離線使用與安裝至桌面)
 
 ---
