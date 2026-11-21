@@ -41,10 +41,11 @@ export class AssessmentStateManager {
   private isSupportLegFlat: boolean = true;
   private compensationWarning?: string;
 
-  // 峰值維持鎖定計時 (Hold Timer) - 依需求設定為 1.5 秒
+  // 峰值維持鎖定計時 (Hold Timer) - 設為 1.2 秒 (兼顧生理耐受度與自動判定靈敏度)
   private holdStartTime: number = 0;
-  private holdThresholdMs: number = 1500;
+  private holdThresholdMs: number = 1200;
   private holdProgress: number = 0;
+  private lastTickProgress: number = 0;
 
   private report: MobilityRiskReport | null = null;
   private statusMessage: string = '請將鏡頭對準受測者側面';
@@ -95,8 +96,10 @@ export class AssessmentStateManager {
     this.peakAngle = 0;
     this.holdProgress = 0;
     this.holdStartTime = 0;
+    this.lastTickProgress = 0;
     this.report = null;
     this.statusMessage = '【第一步：右腿】請受測者保持直膝，緩慢抬起右腿至最高點，維持一秒半';
+    soundManager.playCountdownTone(980);
     soundManager.speak('檢測開始。請受測者保持直膝，緩慢抬起右腿至最高點，維持一秒半。', true);
     this.notify();
   }
@@ -111,9 +114,11 @@ export class AssessmentStateManager {
     this.peakAngle = 0;
     this.holdProgress = 0;
     this.holdStartTime = 0;
+    this.lastTickProgress = 0;
     this.report = null;
     this.statusMessage = '請將鏡頭對準受測者側面';
     if (speakNotice) {
+      soundManager.playWarningTone();
       soundManager.speak('檢測已取消，請準備重新開始。', true);
     }
     this.notify();
@@ -157,7 +162,9 @@ export class AssessmentStateManager {
         this.peakAngle = 0;
         this.holdProgress = 0;
         this.holdStartTime = 0;
+        this.lastTickProgress = 0;
         this.statusMessage = '【第二步：左腿】請受測者保持直膝，緩慢抬起左腿至最高點，維持一秒半';
+        soundManager.playCountdownTone(980);
         soundManager.speak('現在請受測者保持直膝，緩慢抬起左腿至最高點，維持一秒半。', true);
         this.notify();
       }
@@ -213,33 +220,67 @@ export class AssessmentStateManager {
     this.isSupportLegFlat = result.isSupportLegFlat;
     this.compensationWarning = result.compensationWarning;
 
-    // 更新峰值
-    if (this.currentAngle > this.peakAngle) {
-      this.peakAngle = this.currentAngle;
-    }
-
-    // 自動停頓鎖定機制：
-    // 若抬腿角度超過 25°，且在當前峰值附近 (差值 <= 3°) 保持停頓
-    if (this.currentAngle >= 25 && Math.abs(this.currentAngle - this.peakAngle) <= 3) {
-      const now = Date.now();
-      if (this.holdStartTime === 0) {
-        this.holdStartTime = now;
+    // 1. 抬腿門檻：當抬起腿角度 >= 18°，即視為受測者開始抬腿
+    if (this.currentAngle >= 18) {
+      // 2. 更新當次最高峰值
+      if (this.currentAngle > this.peakAngle) {
+        this.peakAngle = this.currentAngle;
       }
-      const elapsed = now - this.holdStartTime;
-      this.holdProgress = Math.min(100, Math.round((elapsed / this.holdThresholdMs) * 100));
 
-      if (elapsed >= this.holdThresholdMs) {
-        // 達成維持 1.5 秒，自動拍照並鎖定！
-        if (this.step === 'MEASURING_RIGHT') {
-          this.lockRight(this.peakAngle);
-        } else if (this.step === 'MEASURING_LEFT') {
-          this.lockLeft(this.peakAngle);
+      // 3. 判定是否處於最高點停頓區間 (容許 8 度的生理肌肉震顫與視訊抖動)
+      const inPeakZone = this.currentAngle >= Math.max(18, this.peakAngle - 8);
+
+      if (inPeakZone) {
+        const now = Date.now();
+        if (this.holdStartTime === 0) {
+          this.holdStartTime = now;
+        }
+
+        const elapsed = now - this.holdStartTime;
+        this.holdProgress = Math.min(100, Math.round((elapsed / this.holdThresholdMs) * 100));
+
+        // 每隔進度發出輕微進度滴答音 (25%, 50%, 75%)
+        if (this.holdProgress >= 25 && this.lastTickProgress < 25) {
+          this.lastTickProgress = 25;
+          soundManager.playHoldProgressTick(25);
+        } else if (this.holdProgress >= 50 && this.lastTickProgress < 50) {
+          this.lastTickProgress = 50;
+          soundManager.playHoldProgressTick(50);
+        } else if (this.holdProgress >= 75 && this.lastTickProgress < 75) {
+          this.lastTickProgress = 75;
+          soundManager.playHoldProgressTick(75);
+        }
+
+        if (elapsed >= this.holdThresholdMs) {
+          // 達成維持時間，全自動拍照截圖並鎖定！
+          if (this.step === 'MEASURING_RIGHT') {
+            this.lockRight(this.peakAngle);
+          } else if (this.step === 'MEASURING_LEFT') {
+            this.lockLeft(this.peakAngle);
+          }
+        }
+      } else {
+        // 若受測者已經在最高點維持超過 750ms，且隨後開始自然放鬆下放腿 (< peakAngle - 8)
+        // 運動醫學原則：表示受測者已達成該次動作之最大極限，直接自動判定成功並拍照鎖定最高峰值！
+        const heldDuration = this.holdStartTime > 0 ? Date.now() - this.holdStartTime : 0;
+        if (heldDuration >= 750 && this.peakAngle >= 25) {
+          if (this.step === 'MEASURING_RIGHT') {
+            this.lockRight(this.peakAngle);
+          } else if (this.step === 'MEASURING_LEFT') {
+            this.lockLeft(this.peakAngle);
+          }
+        } else {
+          // 未達標準且動作大幅晃動，重設計時
+          this.holdStartTime = 0;
+          this.holdProgress = 0;
+          this.lastTickProgress = 0;
         }
       }
     } else {
-      // 動作波動較大或正在向上抬升，重設停頓計時
+      // 腿放平在地面時
       this.holdStartTime = 0;
       this.holdProgress = 0;
+      this.lastTickProgress = 0;
     }
 
     this.notify();

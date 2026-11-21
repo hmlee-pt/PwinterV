@@ -368,8 +368,12 @@ function tick() {
     const isBodyInFrame =
       lastLandmarks &&
       lastLandmarks.length >= 29 &&
-      ((lastLandmarks[11]?.visibility ?? 0) > 0.45 || (lastLandmarks[12]?.visibility ?? 0) > 0.45) &&
-      ((lastLandmarks[27]?.visibility ?? 0) > 0.35 || (lastLandmarks[28]?.visibility ?? 0) > 0.35);
+      ((lastLandmarks[11]?.visibility ?? 0) > 0.35 || (lastLandmarks[12]?.visibility ?? 0) > 0.35) &&
+      ((lastLandmarks[23]?.visibility ?? 0) > 0.35 || (lastLandmarks[24]?.visibility ?? 0) > 0.35) &&
+      ((lastLandmarks[25]?.visibility ?? 0) > 0.3 ||
+        (lastLandmarks[26]?.visibility ?? 0) > 0.3 ||
+        (lastLandmarks[27]?.visibility ?? 0) > 0.3 ||
+        (lastLandmarks[28]?.visibility ?? 0) > 0.3);
 
     if (level.isLevel && isBodyInFrame) {
       if (!hasSpokenReadyPrompt) {
@@ -563,12 +567,24 @@ btnDemo.addEventListener('click', () => {
   runDemoSimulation();
 });
 
-// 語音切換
+// 語音切換與試聽
 btnSoundToggle.addEventListener('click', () => {
-  const muted = !soundManager.getIsMuted();
-  soundManager.setMuted(muted);
-  soundIcon.textContent = muted ? '🔇' : '🔊';
+  soundManager.unlockAudio();
+  const nextMuted = !soundManager.getIsMuted();
+  soundManager.setMuted(nextMuted);
+  soundIcon.textContent = nextMuted ? '🔇' : '🔊';
+  if (!nextMuted) {
+    soundManager.testSoundAndVoice();
+  }
 });
+
+// 手機音效與語音獨立測試按鈕 (位於操作指引中)
+const btnTestSound = document.getElementById('btn-test-sound');
+if (btnTestSound) {
+  btnTestSound.addEventListener('click', () => {
+    soundManager.testSoundAndVoice();
+  });
+}
 
 // 前後鏡頭切換
 btnCameraFlip.addEventListener('click', async () => {
