@@ -48,6 +48,17 @@
         📱 推薦橫放手機 (Landscape)，退後 1.5 米全身入鏡
       </div>
 
+      <!-- 橫放檢測通知 (當偵測到物理橫拿但螢幕鎖定直向時提示開啟旋轉) -->
+      <div id="auto-rotate-notice" class="auto-rotate-notice" style="display: none;">
+        🔄 偵測到手機橫拿中：建議下拉手機開啟「自動旋轉」，解鎖大螢幕橫向視野！
+      </div>
+
+      <!-- PWA 新版本發布通知 Toast -->
+      <div id="pwa-update-toast" class="pwa-update-toast" style="display: none;">
+        <span>✨ 系統已發布新版本！</span>
+        <button id="btn-pwa-refresh" class="btn-primary" style="padding: 5px 12px; font-size: 12px; border-radius: 12px;">立即更新</button>
+      </div>
+
       <!-- 相機預覽與 AI 骨架畫布 -->
       <main class="camera-container" id="camera-container">
         <video id="webcam" playsinline autoplay muted></video>

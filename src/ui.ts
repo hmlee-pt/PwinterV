@@ -198,23 +198,41 @@ export function renderHUD(rc: RenderContext) {
 }
 
 function drawFramingGuide(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  const isLandscape = w > h;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
   ctx.lineWidth = 2;
   ctx.setLineDash([8, 8]);
-  ctx.strokeRect(w * 0.1, h * 0.2, w * 0.8, h * 0.6);
+
+  if (isLandscape) {
+    // 橫向模式：人體仰臥橫躺，取景框配合寬螢幕
+    ctx.strokeRect(w * 0.08, h * 0.16, w * 0.84, h * 0.68);
+  } else {
+    // 直立模式：人體仰臥橫躺在直立畫面中段
+    ctx.strokeRect(w * 0.06, h * 0.28, w * 0.88, h * 0.44);
+  }
   ctx.setLineDash([]);
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-  ctx.font = 'bold 18px sans-serif';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.font = isLandscape ? 'bold 16px sans-serif' : 'bold 17px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('請將手機平視對準受測者側面（建議橫向握持，全身入鏡）', w / 2, h / 2);
+
+  if (isLandscape) {
+    ctx.fillText('📱 橫向全螢幕：請退後約 1.5 ~ 2 米（使頭部至腳踝全身入鏡）', w / 2, h / 2 - 10);
+  } else {
+    ctx.fillText('📱 直立拍攝：請退後約 2.5 ~ 3 米（使頭部至腳踝全身入鏡）', w / 2, h / 2 - 10);
+  }
+
+  ctx.font = '13.5px sans-serif';
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillText('維持手機垂直地面 (上方水平儀顯示綠燈)', w / 2, h / 2 + 16);
 }
 
 function drawHoldProgress(ctx: CanvasRenderingContext2D, w: number, progress: number, angle: number) {
+  const isLandscape = w > 500;
   const barW = Math.min(320, w * 0.85);
   const barH = 16;
   const x = (w - barW) / 2;
-  const y = 80;
+  const y = isLandscape ? 56 : 80;
 
   // 背景
   ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -230,9 +248,9 @@ function drawHoldProgress(ctx: CanvasRenderingContext2D, w: number, progress: nu
   ctx.fill();
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 16px sans-serif';
+  ctx.font = 'bold 15px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`維持中 (${Math.round(angle)}°) ... 自動鎖定 ${progress}%`, w / 2, y - 10);
+  ctx.fillText(`維持中 (${Math.round(angle)}°) ... 自動鎖定 ${progress}%`, w / 2, y - 8);
 }
 
 function drawCompensationAlert(ctx: CanvasRenderingContext2D, w: number, msg: string) {

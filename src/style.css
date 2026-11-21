@@ -447,3 +447,145 @@ html, body {
   font-size: 13px;
   line-height: 1.5;
 }
+
+/* 橫向持機提示與提醒 */
+.auto-rotate-notice {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1.5px solid #f59e0b;
+  color: #fbbf24;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 20px;
+  text-align: center;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  width: 90%;
+  max-width: 440px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+/* PWA 新版本發布通知 Toast */
+.pwa-update-toast {
+  position: fixed;
+  top: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.96);
+  border: 1.5px solid #10b981;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 200;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+}
+
+/* 橫向模式專屬佈局 (Landscape Layout - 寬螢幕相機風格) */
+@media (orientation: landscape) {
+  .orientation-tip {
+    display: none !important;
+  }
+  .auto-rotate-notice {
+    display: none !important;
+  }
+
+  .top-bar {
+    padding: max(4px, env(safe-area-inset-top)) 16px 4px;
+  }
+
+  .brand-badge {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+
+  .level-badge {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+
+  /* 底部列重組為水平行佈局，大幅釋放中央取景視野 */
+  .bottom-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 16px max(6px, env(safe-area-inset-bottom));
+    gap: 10px;
+    background: linear-gradient(to top, rgba(9, 13, 22, 0.96) 0%, rgba(9, 13, 22, 0.8) 75%, transparent 100%);
+  }
+
+  .status-pill {
+    font-size: 12px;
+    padding: 4px 12px;
+    margin: 0;
+    max-width: 250px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .angle-dashboard {
+    padding: 4px 14px;
+    gap: 14px;
+  }
+
+  .angle-card .side-label {
+    font-size: 11px;
+  }
+
+  .angle-card .angle-val {
+    font-size: 22px;
+  }
+
+  .action-controls {
+    gap: 8px;
+  }
+
+  .btn-primary {
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: 20px;
+  }
+
+  .btn-secondary {
+    padding: 7px 12px;
+    font-size: 12px;
+    border-radius: 18px;
+  }
+
+  .btn-shutter {
+    width: 44px;
+    height: 44px;
+    font-size: 10px;
+  }
+
+  /* 彈窗緊湊自適應 */
+  .modal-card {
+    max-height: 88vh;
+    padding: 16px 20px;
+    gap: 12px;
+  }
+
+  .comp-box {
+    padding: 8px 12px;
+  }
+
+  .comp-box .val {
+    font-size: 24px;
+  }
+}

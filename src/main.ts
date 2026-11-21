@@ -52,6 +52,11 @@ const inputAthleteName = document.getElementById('input-athlete-name') as HTMLIn
 const cameraPromptOverlay = document.getElementById('camera-prompt-overlay') as HTMLElement;
 const btnStartCameraNow = document.getElementById('btn-start-camera-now') as HTMLButtonElement;
 
+// 橫向持機與 PWA 更新提示
+const autoRotateNotice = document.getElementById('auto-rotate-notice') as HTMLElement;
+const pwaUpdateToast = document.getElementById('pwa-update-toast') as HTMLElement;
+const btnPwaRefresh = document.getElementById('btn-pwa-refresh') as HTMLButtonElement;
+
 // 執行階段變數
 let stream: MediaStream | null = null;
 let currentFacingMode: 'environment' | 'user' = 'environment';
@@ -297,6 +302,16 @@ function tick() {
   const level = inclinometerSensor.getStatus();
   levelDot.style.backgroundColor = level.color;
   levelText.textContent = level.statusText;
+
+  // 1.1 檢測是否物理橫放但螢幕處於直向鎖定
+  const isScreenPortrait = window.innerWidth < window.innerHeight;
+  if (autoRotateNotice) {
+    if (level.isHoldingLandscape && isScreenPortrait) {
+      autoRotateNotice.style.display = 'block';
+    } else {
+      autoRotateNotice.style.display = 'none';
+    }
+  }
 
   // 2. 執行 AI 姿態辨識
   if (!isDemoMode && videoEl.readyState >= 2) {
@@ -553,11 +568,42 @@ function renderHistoryList() {
   });
 });
 
-// 註冊 Service Worker (PWA 離線支援)
+// 註冊 Service Worker (PWA 離線支援與自動更新檢測)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((err) => {
-      console.warn('Service Worker 註冊略過:', err);
+    navigator.serviceWorker
+      .register('./sw.js')
+      .then((reg) => {
+        // 檢查是否有背景更新已就緒
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                if (pwaUpdateToast) {
+                  pwaUpdateToast.style.display = 'flex';
+                }
+              }
+            });
+          }
+        });
+      })
+      .catch((err) => {
+        console.warn('Service Worker 註冊略過:', err);
+      });
+
+    if (btnPwaRefresh) {
+      btnPwaRefresh.addEventListener('click', () => {
+        window.location.reload();
+      });
+    }
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
     });
   });
 }

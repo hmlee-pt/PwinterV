@@ -1,8 +1,8 @@
 /**
- * PWA Service Worker (離線快取支援)
+ * PWA Service Worker (離線快取支援與 Network First 網路優先策略)
  */
 
-const CACHE_NAME = 'fms-mobility-cache-v1';
+const CACHE_NAME = 'fms-mobility-cache-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,39 +11,64 @@ const ASSETS_TO_CACHE = [
 ];
 
 self.addEventListener('install', (event) => {
+  // 立即跳過等待，使新版 Service Worker 快速生效
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
+  // 清除舊快取並立即控制現有頁面客戶端
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[SW] 清理舊快取:', key);
             return caches.delete(key);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  // 對於跨域 CDN 與模型檔採用 Stale-While-Revalidate 或網路優先
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+
+  // 1. 對於 HTML 導航頁面與本站 HTML：採用 Network First (網路優先，及時獲取最新版，離線降級回傳快取)
+  if (
+    event.request.mode === 'navigate' ||
+    event.request.destination === 'document' ||
+    url.pathname.endsWith('index.html') ||
+    url.pathname === '/' ||
+    url.pathname.endsWith('/PwinterV/')
+  ) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match('./index.html').then((cached) => cached || caches.match('./'));
+        })
+    );
+    return;
+  }
+
+  // 2. 對於其他靜態檔案 (JS/CSS/SVG/CDN)：採用快取回傳，同時背景異步向網路抓取更新 (Stale-While-Revalidate)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request)
+      const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
           if (
             networkResponse &&
@@ -52,19 +77,14 @@ self.addEventListener('fetch', (event) => {
               event.request.url.includes('cdn.jsdelivr.net') ||
               event.request.url.includes('storage.googleapis.com'))
           ) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
           }
           return networkResponse;
         })
-        .catch(() => {
-          // 網路離線時降級回傳快取的 index.html
-          if (event.request.headers.get('accept')?.includes('text/html')) {
-            return caches.match('./index.html');
-          }
-        });
+        .catch(() => cachedResponse);
+
+      return cachedResponse || fetchPromise;
     })
   );
 });
