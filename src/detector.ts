@@ -24,27 +24,30 @@ export class PoseDetector {
         'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
       );
 
-      if (onProgress) onProgress('正在載入輕量化端側骨架模型 (Pose Lite)...');
+      if (onProgress) onProgress('正在載入高精度骨架追蹤模型 (Pose Full)...');
+      const FULL_MODEL_URL =
+        'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task';
+      const LITE_MODEL_URL =
+        'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+
       try {
         this.landmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath:
-              'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+            modelAssetPath: FULL_MODEL_URL,
             delegate: 'GPU',
           },
           runningMode: 'VIDEO',
           numPoses: 1,
-          minPoseDetectionConfidence: 0.5,
-          minPosePresenceConfidence: 0.5,
-          minTrackingConfidence: 0.5,
+          minPoseDetectionConfidence: 0.55,
+          minPosePresenceConfidence: 0.55,
+          minTrackingConfidence: 0.55,
         });
       } catch (gpuErr) {
-        console.warn('GPU 加速初始化失敗，自動切換至 CPU 模式運算:', gpuErr);
-        if (onProgress) onProgress('切換至 CPU 模式載入...');
+        console.warn('高精度模型 GPU 加速失敗，嘗試降級載入:', gpuErr);
+        if (onProgress) onProgress('切換至相容模式載入...');
         this.landmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath:
-              'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+            modelAssetPath: LITE_MODEL_URL,
             delegate: 'CPU',
           },
           runningMode: 'VIDEO',

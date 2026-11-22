@@ -35,32 +35,41 @@ function drawRoundRect(
     ctx.rect(x, y, w, h);
   }
 }
+// 專業臨床運動力學核心連線 (僅保留軀幹與下肢核心力學鏈，過濾頭部與手指等雜亂節點)
 const POSE_CONNECTIONS: [number, number][] = [
-  // 軀幹
-  [11, 12],
-  [11, 23],
-  [12, 24],
-  [23, 24],
-  // 右腿
+  // 軀幹核心
+  [11, 12], // 雙肩
+  [11, 23], // 左側身
+  [12, 24], // 右側身
+  [23, 24], // 骨盆腰髖
+  // 右下肢 (髖 -> 膝 -> 踝 -> 腳跟 -> 腳尖)
   [24, 26],
   [26, 28],
   [28, 30],
   [30, 32],
-  // 左腿
+  // 左下肢 (髖 -> 膝 -> 踝 -> 腳跟 -> 腳尖)
   [23, 25],
   [25, 27],
   [27, 29],
   [29, 31],
-  // 右臂
-  [12, 14],
-  [14, 16],
-  // 左臂
-  [11, 13],
-  [13, 15],
 ];
 
+// 需要渲染的關鍵關節點索引 (完全隱藏面部 0-10 與雙手 13-22)
+const CLINICAL_KEYPOINTS = [11, 12, 23, 24, 25, 26, 27, 28, 30, 32, 29, 31];
+
 export function renderHUD(rc: RenderContext) {
-  const { canvas, ctx, landmarks, currentAngle, peakAngle, activeSide, isKneeStraight, isSupportLegFlat, holdProgress, videoElement } = rc;
+  const {
+    canvas,
+    ctx,
+    landmarks,
+    currentAngle,
+    peakAngle,
+    activeSide,
+    isKneeStraight,
+    isSupportLegFlat,
+    holdProgress,
+    videoElement,
+  } = rc;
   const width = canvas.width;
   const height = canvas.height;
 
@@ -77,15 +86,15 @@ export function renderHUD(rc: RenderContext) {
     return;
   }
 
-  // 1. 繪製骨架連線
-  ctx.lineWidth = 4;
+  // 1. 繪製抗鋸齒專業力學連線
   ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
 
   for (const [startIdx, endIdx] of POSE_CONNECTIONS) {
     const p1 = landmarks[startIdx];
     const p2 = landmarks[endIdx];
 
-    if (!p1 || !p2 || (p1.visibility && p1.visibility < 0.4) || (p2.visibility && p2.visibility < 0.4)) {
+    if (!p1 || !p2 || (p1.visibility && p1.visibility < 0.35) || (p2.visibility && p2.visibility < 0.35)) {
       continue;
     }
 
@@ -97,48 +106,73 @@ export function renderHUD(rc: RenderContext) {
     // 判斷是否為當前測量目標腿
     const isTargetLeg =
       activeSide === 'right'
-        ? (startIdx === 24 && endIdx === 26) || (startIdx === 26 && endIdx === 28)
+        ? (startIdx === 24 && endIdx === 26) ||
+          (startIdx === 26 && endIdx === 28) ||
+          (startIdx === 28 && endIdx === 30) ||
+          (startIdx === 30 && endIdx === 32)
         : activeSide === 'left'
-        ? (startIdx === 23 && endIdx === 25) || (startIdx === 25 && endIdx === 27)
+        ? (startIdx === 23 && endIdx === 25) ||
+          (startIdx === 25 && endIdx === 27) ||
+          (startIdx === 27 && endIdx === 29) ||
+          (startIdx === 29 && endIdx === 31)
         : false;
 
     if (isTargetLeg) {
-      ctx.strokeStyle = isKneeStraight ? '#10b981' : '#f59e0b'; // 綠色正常 / 橘黃色膝蓋微彎
+      // 目標腿：鮮明霓虹發光線條
+      ctx.shadowColor = isKneeStraight ? '#10b981' : '#f59e0b';
+      ctx.shadowBlur = 8;
+      ctx.strokeStyle = isKneeStraight ? '#10b981' : '#f59e0b'; // 綠色正常 / 橘黃色膝蓋微彎代償
       ctx.lineWidth = 6;
     } else {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.lineWidth = 3;
+      // 支撐腿與軀幹：柔和高對比白青半透明線
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 3.5;
     }
 
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
+    ctx.shadowBlur = 0; // 重設陰影
   }
 
-  // 2. 繪製關節關鍵點
-  for (let i = 0; i < landmarks.length; i++) {
-    const p = landmarks[i];
-    if (!p || (p.visibility && p.visibility < 0.4)) continue;
+  // 2. 繪製關節關鍵點 (只繪製臨床下肢與軀幹，徹底移除臉部跳動雜點)
+  for (const idx of CLINICAL_KEYPOINTS) {
+    const p = landmarks[idx];
+    if (!p || (p.visibility && p.visibility < 0.35)) continue;
 
-    // 僅突出顯示下肢與軀幹關鍵點 (11, 12, 23, 24, 25, 26, 27, 28)
-    const isMajor = [11, 12, 23, 24, 25, 26, 27, 28].includes(i);
-    const radius = isMajor ? 6 : 3;
+    const isTargetLegJoint =
+      activeSide === 'right'
+        ? [24, 26, 28, 30, 32].includes(idx)
+        : activeSide === 'left'
+        ? [23, 25, 27, 29, 31].includes(idx)
+        : false;
 
     const px = p.x * width;
     const py = p.y * height;
+    const radius = isTargetLegJoint ? 7 : 5;
 
     ctx.beginPath();
     ctx.arc(px, py, radius, 0, 2 * Math.PI);
-    if (isMajor) {
+    if (isTargetLegJoint) {
+      ctx.fillStyle = isKneeStraight ? '#10b981' : '#f59e0b';
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+
+      // 白色中心圓核
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else {
       ctx.fillStyle = '#38bdf8'; // 亮青藍色
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1.5;
       ctx.fill();
       ctx.stroke();
-    } else {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-      ctx.fill();
     }
   }
 

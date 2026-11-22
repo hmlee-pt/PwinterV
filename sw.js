@@ -2,12 +2,21 @@
  * PWA Service Worker (離線快取支援與 Network First 網路優先策略)
  */
 
-const CACHE_NAME = 'fms-mobility-cache-v6';
+const CACHE_NAME = 'fms-mobility-cache-v7';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './icon.svg',
+  './audio/autostart.wav',
+  './audio/right_leg.wav',
+  './audio/right_locked.wav',
+  './audio/left_leg.wav',
+  './audio/finished.wav',
+  './audio/test_ready.wav',
+  './audio/cancelled.wav',
+  './audio/level_ok.wav',
+  './audio/level_tilt.wav',
 ];
 
 self.addEventListener('install', (event) => {

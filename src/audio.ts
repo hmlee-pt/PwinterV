@@ -1,17 +1,77 @@
 /**
  * 語音提示與音訊反饋模組 (Voice Guidance & Audio Feedback)
- * 使用瀏覽器原生 Web Speech API 與 Web Audio API
+ * 雙軌架構：
+ * 1. 實體預錄語音檔 (Decoded AudioBuffer) -> 透過 Web Audio 播放，100% 相容無 TTS 語音包之 Android 裝置
+ * 2. 備援語音合成 (Web Speech API) -> 支援動態即時旁白
+ * 3. 硬體級合成音效 (Synthesizer Oscillators) -> 快門聲、倒數音、成功琶音和弦
  */
+
+export type VoiceClip =
+  | 'autostart'
+  | 'right_leg'
+  | 'right_locked'
+  | 'left_leg'
+  | 'finished'
+  | 'test_ready'
+  | 'cancelled'
+  | 'level_ok'
+  | 'level_tilt';
 
 class SoundManager {
   private isMuted: boolean = false;
   private audioCtx: AudioContext | null = null;
   private voice: SpeechSynthesisVoice | null = null;
   private activeUtterance: SpeechSynthesisUtterance | null = null;
+  private audioBuffers: Map<VoiceClip, AudioBuffer> = new Map();
 
   constructor() {
     this.initVoice();
     this.setupGlobalUnlock();
+    this.preloadAudioClips();
+  }
+
+  /**
+   * 預先載入預錄繁體中文語音音檔 (保證零延遲、無需依賴手機 TTS 引擎)
+   */
+  private async preloadAudioClips() {
+    if (typeof window === 'undefined') return;
+
+    const clips: VoiceClip[] = [
+      'autostart',
+      'right_leg',
+      'right_locked',
+      'left_leg',
+      'finished',
+      'test_ready',
+      'cancelled',
+      'level_ok',
+      'level_tilt',
+    ];
+
+    const metaEnv = (import.meta as unknown as { env?: { BASE_URL?: string } }).env;
+    const baseUrl = metaEnv?.BASE_URL || './';
+    const audioDir = baseUrl.endsWith('/') ? `${baseUrl}audio/` : `${baseUrl}/audio/`;
+
+    for (const clip of clips) {
+      try {
+        const url = `${audioDir}${clip}.wav`;
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const arrayBuffer = await res.arrayBuffer();
+        const ctx = this.getAudioContext();
+        ctx.decodeAudioData(
+          arrayBuffer,
+          (decoded) => {
+            this.audioBuffers.set(clip, decoded);
+          },
+          (err) => {
+            console.warn(`音訊解碼失敗 (${clip}):`, err);
+          }
+        );
+      } catch (err) {
+        console.warn(`載入音訊檔失敗 (${clip}):`, err);
+      }
+    }
   }
 
   private initVoice() {
@@ -100,12 +160,62 @@ class SoundManager {
   }
 
   /**
-   * 播放語音提示 (具備防垃圾回收與多重備援)
+   * 播放已解碼之實體真人語音檔案 (100% 繞過 Android TTS 缺失問題)
+   */
+  public playVoiceClip(clip: VoiceClip): boolean {
+    if (this.isMuted) return false;
+    this.unlockAudio();
+    const ctx = this.getAudioContext();
+    const buffer = this.audioBuffers.get(clip);
+    if (!buffer) return false;
+
+    try {
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(1.0, ctx.currentTime);
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(0);
+      return true;
+    } catch (err) {
+      console.warn(`播放音訊檔異常 (${clip}):`, err);
+      return false;
+    }
+  }
+
+  private matchClip(text: string): VoiceClip | null {
+    if (text.includes('三、二、一') || text.includes('條件符合')) return 'autostart';
+    if (text.includes('右腿鎖定') || (text.includes('右腿') && (text.includes('換左') || text.includes('換左腳')))) return 'right_locked';
+    if (text.includes('第一步') || (text.includes('抬起右腿') && text.includes('最高點'))) return 'right_leg';
+    if (text.includes('第二步') || (text.includes('抬起左腿') && text.includes('最高點'))) return 'left_leg';
+    if (text.includes('全部完成') || text.includes('評估報告')) return 'finished';
+    if (text.includes('音效與語音已就緒') || text.includes('音量正常')) return 'test_ready';
+    if (text.includes('取消') || text.includes('重新開始')) return 'cancelled';
+    if (text.includes('視角平正') || text.includes('全身已入鏡')) return 'level_ok';
+    if (text.includes('手機拿正') || text.includes('平視')) return 'level_tilt';
+    return null;
+  }
+
+  /**
+   * 播放語音提示 (雙軌制：實體預錄語音優先，TTS 降級備援)
    */
   public speak(text: string, force: boolean = false) {
-    if (this.isMuted || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (this.isMuted || typeof window === 'undefined') return;
 
-    // 喚醒語音合成引擎
+    // 1. 優先嘗試播放實體真人語音音訊檔
+    const clipKey = this.matchClip(text);
+    if (clipKey && this.audioBuffers.has(clipKey)) {
+      const success = this.playVoiceClip(clipKey);
+      if (success) return;
+    }
+
+    // 2. 備援方案：瀏覽器原生 TTS 語音合成
+    if (!('speechSynthesis' in window)) return;
+
     try {
       window.speechSynthesis.resume();
     } catch {}
@@ -141,11 +251,10 @@ class SoundManager {
       this.activeUtterance = null;
     };
 
-    // 關鍵修復：掛載到全域 window 防止被 Chromium V8 引擎作為垃圾回收提早中止
+    // 掛載到全域 window 防止被 Chromium V8 引擎提早垃圾回收
     this.activeUtterance = utterance;
     (window as unknown as { __activeUtterance?: SpeechSynthesisUtterance }).__activeUtterance = utterance;
 
-    // 延遲 40ms 避免與剛發送的 cancel() 競爭中斷
     setTimeout(() => {
       try {
         window.speechSynthesis.speak(utterance);
@@ -270,7 +379,9 @@ class SoundManager {
     this.unlockAudio();
     this.playSuccessTone();
     setTimeout(() => {
-      this.speak('音效與語音已就緒，音量正常！', true);
+      if (!this.playVoiceClip('test_ready')) {
+        this.speak('音效與語音已就緒，音量正常！', true);
+      }
     }, 280);
   }
 

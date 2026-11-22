@@ -10,6 +10,7 @@ import { inclinometerSensor } from './sensors';
 import { soundManager } from './audio';
 import { saveAssessmentRecord, getAssessmentRecords, clearAssessmentRecords } from './storage';
 import { NormalizedLandmark } from './biomechanics';
+import { poseFilter } from './filter';
 
 // DOM 元素參考
 const videoEl = document.getElementById('webcam') as HTMLVideoElement;
@@ -411,11 +412,13 @@ function tick() {
     autoStartEligibleStartTime = 0;
   }
 
-  // 2. 執行 AI 姿態辨識
+  // 2. 執行 AI 姿態辨識與 1€ Filter 平滑抗抖
   if (!isDemoMode && videoEl.readyState >= 2) {
-    const result = poseDetector.detect(videoEl, performance.now());
+    const now = performance.now();
+    const result = poseDetector.detect(videoEl, now);
     if (result && result.landmarks && result.landmarks[0]) {
-      lastLandmarks = result.landmarks[0];
+      // 關鍵升級：導入運動醫學級 One-Euro Filter 消除高頻雜訊與節點跳動
+      lastLandmarks = poseFilter.filterLandmarks(result.landmarks[0], now);
       stateManager.updatePose(lastLandmarks);
     } else {
       lastLandmarks = null;
