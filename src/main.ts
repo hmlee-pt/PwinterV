@@ -391,11 +391,12 @@ function tick() {
         hasAutoStarted = true;
         soundManager.speak('檢測條件符合，三、二、一，開始檢測！', true);
         soundManager.playCountdownTone();
+        // 等待「三、二、一，開始檢測」語音播放完畢 (~3.6秒) 後再進入第一步，避免語音重疊
         setTimeout(() => {
           if (stateManager.getSnapshot().step === 'IDLE') {
             stateManager.startAssessment();
           }
-        }, 1200);
+        }, 3600);
       }
     } else {
       autoStartEligibleStartTime = 0;
@@ -425,10 +426,12 @@ function tick() {
     }
   }
 
-  // 3. 繪製 HUD Overlay
+  // 3. 繪製 HUD Overlay (使用智慧追蹤之活動腿 activeSide)
   const currentSnap = stateManager.getSnapshot();
   const activeSide =
-    currentSnap.step === 'MEASURING_RIGHT' ? 'right' : currentSnap.step === 'MEASURING_LEFT' ? 'left' : null;
+    currentSnap.step === 'MEASURING_RIGHT' || currentSnap.step === 'MEASURING_LEFT'
+      ? currentSnap.activeSide
+      : null;
 
   const renderContext: RenderContext = {
     canvas: canvasEl,

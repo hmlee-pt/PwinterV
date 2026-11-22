@@ -2,7 +2,7 @@
  * 檢測狀態機與流程管理 (Testing State Machine)
  */
 
-import { evaluateASLR, generateMobilityReport, MobilityRiskReport, NormalizedLandmark } from './biomechanics';
+import { evaluateDualASLR, generateMobilityReport, MobilityRiskReport, NormalizedLandmark } from './biomechanics';
 import { soundManager } from './audio';
 
 export type AssessmentStep =
@@ -15,6 +15,7 @@ export type AssessmentStep =
 
 export interface StateSnapshot {
   step: AssessmentStep;
+  activeSide: 'right' | 'left';
   currentAngle: number;
   peakAngle: number;
   rightPeakAngle: number | null;
@@ -31,6 +32,7 @@ export interface StateSnapshot {
 
 export class AssessmentStateManager {
   private step: AssessmentStep = 'IDLE';
+  private activeSide: 'right' | 'left' = 'right';
   private rightPeakAngle: number | null = null;
   private leftPeakAngle: number | null = null;
   private rightSnapshotUrl: string | null = null;
@@ -71,6 +73,7 @@ export class AssessmentStateManager {
   public getSnapshot(): StateSnapshot {
     return {
       step: this.step,
+      activeSide: this.activeSide,
       currentAngle: this.currentAngle,
       peakAngle: this.peakAngle,
       rightPeakAngle: this.rightPeakAngle,
@@ -88,6 +91,7 @@ export class AssessmentStateManager {
 
   public startAssessment() {
     this.step = 'MEASURING_RIGHT';
+    this.activeSide = 'right';
     this.rightPeakAngle = null;
     this.leftPeakAngle = null;
     this.rightSnapshotUrl = null;
@@ -106,6 +110,7 @@ export class AssessmentStateManager {
 
   public reset(speakNotice = false) {
     this.step = 'IDLE';
+    this.activeSide = 'right';
     this.rightPeakAngle = null;
     this.leftPeakAngle = null;
     this.rightSnapshotUrl = null;
@@ -154,10 +159,11 @@ export class AssessmentStateManager {
     soundManager.speak(`右腿鎖定成功，${Math.round(this.rightPeakAngle)}度！現在換左腳，請受測者放平，準備做左腿動作。`, true);
     this.notify();
 
-    // 2.5 秒後自動進入左腿檢測
+    // 5.5 秒後自動進入左腿檢測 (確保語音播放完畢與受測者放下右腳之緩衝時間)
     setTimeout(() => {
       if (this.step === 'TRANSITION') {
         this.step = 'MEASURING_LEFT';
+        this.activeSide = 'left';
         this.currentAngle = 0;
         this.peakAngle = 0;
         this.holdProgress = 0;
@@ -168,7 +174,7 @@ export class AssessmentStateManager {
         soundManager.speak('現在請受測者保持直膝，緩慢抬起左腿至最高點，維持一秒半。', true);
         this.notify();
       }
-    }, 2500);
+    }, 5500);
   }
 
   private lockLeft(angle: number) {
@@ -208,12 +214,16 @@ export class AssessmentStateManager {
       return;
     }
 
-    const side = this.step === 'MEASURING_RIGHT' ? 'right' : 'left';
-    const result = evaluateASLR(landmarks, side);
+    const preferredSide = this.step === 'MEASURING_RIGHT' ? 'right' : 'left';
+    const dualResult = evaluateDualASLR(landmarks, preferredSide);
 
-    if (!result) {
+    if (!dualResult) {
       return;
     }
+
+    // 智慧鎖定真正活動中的腿 (自適應側視角 MediaPipe 左右腿翻轉或患者動作)
+    this.activeSide = dualResult.activeSide;
+    const result = dualResult.activeMeasurement;
 
     this.currentAngle = result.hipFlexionAngle;
     this.isKneeStraight = result.isKneeStraight;

@@ -4,6 +4,7 @@ import {
   calculateSlopeAngle,
   generateMobilityReport,
   evaluateASLR,
+  evaluateDualASLR,
   NormalizedLandmark
 } from '../src/biomechanics';
 
@@ -116,5 +117,92 @@ describe('FMS Scoring Rules (calculateFmsScore)', () => {
     expect(report.fmsLeftScore).toBe(2);
     expect(report.fmsTotalScore).toBe(1);
     expect(report.fmsScoreDescription).toContain('活動度嚴重不足');
+  });
+});
+
+describe('Smart Dual Leg Auto-Tracking (evaluateDualASLR)', () => {
+  function createLyingBodyLandmarks(options: {
+    rightLegLifted: boolean;
+    leftLegLifted: boolean;
+  }): NormalizedLandmark[] {
+    const landmarks: NormalizedLandmark[] = Array.from({ length: 33 }, () => ({
+      x: 0.5,
+      y: 0.5,
+      visibility: 0.95,
+    }));
+
+    // Head/Shoulders at x=0.2, y=0.5
+    landmarks[11] = { x: 0.2, y: 0.5, visibility: 0.95 }; // left shoulder
+    landmarks[12] = { x: 0.2, y: 0.5, visibility: 0.95 }; // right shoulder
+
+    // Hips at x=0.5, y=0.5
+    landmarks[23] = { x: 0.5, y: 0.5, visibility: 0.95 }; // left hip
+    landmarks[24] = { x: 0.5, y: 0.5, visibility: 0.95 }; // right hip
+
+    // Right leg:
+    if (options.rightLegLifted) {
+      // Lifted straight up towards ceiling (y=0.15)
+      landmarks[26] = { x: 0.5, y: 0.3, visibility: 0.95 }; // right knee
+      landmarks[28] = { x: 0.5, y: 0.15, visibility: 0.95 }; // right ankle
+    } else {
+      // Flat on floor (y=0.5, x=0.8)
+      landmarks[26] = { x: 0.65, y: 0.5, visibility: 0.95 };
+      landmarks[28] = { x: 0.8, y: 0.5, visibility: 0.95 };
+    }
+
+    // Left leg:
+    if (options.leftLegLifted) {
+      // Lifted straight up towards ceiling (y=0.15)
+      landmarks[25] = { x: 0.5, y: 0.3, visibility: 0.95 }; // left knee
+      landmarks[27] = { x: 0.5, y: 0.15, visibility: 0.95 }; // left ankle
+    } else {
+      // Flat on floor (y=0.5, x=0.8)
+      landmarks[25] = { x: 0.65, y: 0.5, visibility: 0.95 };
+      landmarks[27] = { x: 0.8, y: 0.5, visibility: 0.95 };
+    }
+
+    return landmarks;
+  }
+
+  it('should auto-swap to right leg when preferred is left but right leg is lifted (resolving 1° bug)', () => {
+    // Subject is raising right leg (90°), left leg is flat (0°)
+    const landmarks = createLyingBodyLandmarks({ rightLegLifted: true, leftLegLifted: false });
+
+    // App is currently at step 'left'
+    const result = evaluateDualASLR(landmarks, 'left');
+    expect(result).not.toBeNull();
+    // It must detect that right leg is the active one!
+    expect(result!.activeSide).toBe('right');
+    expect(result!.isOppositeLegLifted).toBe(true);
+    expect(result!.activeMeasurement.hipFlexionAngle).toBeGreaterThanOrEqual(80);
+  });
+
+  it('should auto-swap to left leg when preferred is right but left leg is lifted', () => {
+    // Subject is raising left leg (90°), right leg is flat (0°)
+    const landmarks = createLyingBodyLandmarks({ rightLegLifted: false, leftLegLifted: true });
+
+    // App is currently at step 'right'
+    const result = evaluateDualASLR(landmarks, 'right');
+    expect(result).not.toBeNull();
+    expect(result!.activeSide).toBe('left');
+    expect(result!.isOppositeLegLifted).toBe(true);
+    expect(result!.activeMeasurement.hipFlexionAngle).toBeGreaterThanOrEqual(80);
+  });
+
+  it('should stay on preferred side when neither leg is lifted yet (flat on floor)', () => {
+    const landmarks = createLyingBodyLandmarks({ rightLegLifted: false, leftLegLifted: false });
+    const result = evaluateDualASLR(landmarks, 'right');
+    expect(result).not.toBeNull();
+    expect(result!.activeSide).toBe('right');
+    expect(result!.isOppositeLegLifted).toBe(false);
+  });
+
+  it('should stay on preferred side when preferred leg is legitimately lifted', () => {
+    const landmarks = createLyingBodyLandmarks({ rightLegLifted: true, leftLegLifted: false });
+    const result = evaluateDualASLR(landmarks, 'right');
+    expect(result).not.toBeNull();
+    expect(result!.activeSide).toBe('right');
+    expect(result!.isOppositeLegLifted).toBe(false);
+    expect(result!.activeMeasurement.hipFlexionAngle).toBeGreaterThanOrEqual(80);
   });
 });

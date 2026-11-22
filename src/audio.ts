@@ -22,6 +22,7 @@ class SoundManager {
   private audioCtx: AudioContext | null = null;
   private voice: SpeechSynthesisVoice | null = null;
   private activeUtterance: SpeechSynthesisUtterance | null = null;
+  private currentVoiceSource: AudioBufferSourceNode | null = null;
   private audioBuffers: Map<VoiceClip, AudioBuffer> = new Map();
 
   constructor() {
@@ -148,10 +149,30 @@ class SoundManager {
     return this.audioCtx;
   }
 
+  /**
+   * 停止所有當前正在發聲的語音指令 (包含預錄音訊與 TTS 語音合成)
+   * 確保指令單一清晰、杜絕聲音重疊
+   */
+  public stopAllVoice() {
+    if (this.currentVoiceSource) {
+      try {
+        this.currentVoiceSource.stop();
+        this.currentVoiceSource.disconnect();
+      } catch {}
+      this.currentVoiceSource = null;
+    }
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+      this.activeUtterance = null;
+    }
+  }
+
   public setMuted(muted: boolean) {
     this.isMuted = muted;
-    if (muted && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+    if (muted) {
+      this.stopAllVoice();
     }
   }
 
@@ -169,6 +190,9 @@ class SoundManager {
     const buffer = this.audioBuffers.get(clip);
     if (!buffer) return false;
 
+    // 關鍵防護：播放新指令前，先停止正在發聲的舊語音，防止多語音交錯重疊
+    this.stopAllVoice();
+
     try {
       if (ctx.state === 'suspended') {
         ctx.resume();
@@ -179,6 +203,14 @@ class SoundManager {
       gain.gain.setValueAtTime(1.0, ctx.currentTime);
       source.connect(gain);
       gain.connect(ctx.destination);
+
+      source.onended = () => {
+        if (this.currentVoiceSource === source) {
+          this.currentVoiceSource = null;
+        }
+      };
+
+      this.currentVoiceSource = source;
       source.start(0);
       return true;
     } catch (err) {
@@ -203,7 +235,7 @@ class SoundManager {
   /**
    * 播放語音提示 (雙軌制：實體預錄語音優先，TTS 降級備援)
    */
-  public speak(text: string, force: boolean = false) {
+  public speak(text: string, _force: boolean = false) {
     if (this.isMuted || typeof window === 'undefined') return;
 
     // 1. 優先嘗試播放實體真人語音音訊檔
@@ -216,15 +248,12 @@ class SoundManager {
     // 2. 備援方案：瀏覽器原生 TTS 語音合成
     if (!('speechSynthesis' in window)) return;
 
+    // 停止先前的音訊檔與 TTS
+    this.stopAllVoice();
+
     try {
       window.speechSynthesis.resume();
     } catch {}
-
-    if (force || window.speechSynthesis.speaking) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {}
-    }
 
     const utterance = new SpeechSynthesisUtterance(text);
     if (!this.voice) {

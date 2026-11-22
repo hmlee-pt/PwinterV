@@ -103,7 +103,7 @@ export function evaluateASLR(
   const supportAnkle = landmarks[isRight ? 27 : 28];
 
   // 檢查關鍵點可信度 (visibility)
-  const minVis = 0.5;
+  const minVis = 0.35; // 適度調寬以適應側躺拍攝時遠端關節的半遮擋
   const points = [targetShoulder, targetHip, targetKnee, targetAnkle, supportHip, supportKnee, supportAnkle];
   const avgConfidence = points.reduce((acc, p) => acc + (p.visibility ?? 1), 0) / points.length;
 
@@ -148,6 +148,84 @@ export function evaluateASLR(
     isSupportLegFlat,
     compensationWarning,
     confidence: avgConfidence,
+  };
+}
+
+export interface DualASLRResult {
+  activeSide: 'right' | 'left';
+  activeMeasurement: ASLRMeasurement;
+  rightMeasurement: ASLRMeasurement | null;
+  leftMeasurement: ASLRMeasurement | null;
+  isOppositeLegLifted: boolean;
+}
+
+/**
+ * 智慧雙腿主動偵測與防呆鎖定 (Smart Active Leg Auto-Tracking)
+ * 解決側向拍攝時 MediaPipe 左右腿標籤遮擋翻轉、或受測者先抬對側腿導致量測到貼地腿 (1°) 的問題。
+ * 原理：同時評估左右腿。若預期側腿角度低 (<15°) 且對側腿明顯抬高 (>=18° 且大於預期側 8° 以上)，
+ * 系統自動判定對側腿為當前真正處於活動狀態之抬起腿！
+ */
+export function evaluateDualASLR(
+  landmarks: NormalizedLandmark[],
+  preferredSide: 'right' | 'left'
+): DualASLRResult | null {
+  if (!landmarks || landmarks.length < 33) return null;
+
+  const right = evaluateASLR(landmarks, 'right');
+  const left = evaluateASLR(landmarks, 'left');
+
+  if (!right && !left) return null;
+  if (!right && left) {
+    return {
+      activeSide: 'left',
+      activeMeasurement: left,
+      rightMeasurement: null,
+      leftMeasurement: left,
+      isOppositeLegLifted: preferredSide === 'right',
+    };
+  }
+  if (right && !left) {
+    return {
+      activeSide: 'right',
+      activeMeasurement: right,
+      rightMeasurement: right,
+      leftMeasurement: null,
+      isOppositeLegLifted: preferredSide === 'left',
+    };
+  }
+
+  const rightAngle = right!.hipFlexionAngle;
+  const leftAngle = left!.hipFlexionAngle;
+
+  let chosenSide: 'right' | 'left' = preferredSide;
+  let isOpposite = false;
+
+  if (preferredSide === 'right') {
+    // 預期測量右腿。但若右腿未抬起 (<15°) 且左腿明顯處於抬高動作狀態 (>=18° 且比右腿高 8° 以上)
+    if (rightAngle < 15 && leftAngle >= 18 && leftAngle > rightAngle + 8) {
+      chosenSide = 'left';
+      isOpposite = true;
+    } else {
+      chosenSide = 'right';
+    }
+  } else {
+    // 預期測量左腿。但若左腿未抬起 (<15°) 且右腿明顯處於抬高動作狀態 (>=18° 且比左腿高 8° 以上)
+    if (leftAngle < 15 && rightAngle >= 18 && rightAngle > leftAngle + 8) {
+      chosenSide = 'right';
+      isOpposite = true;
+    } else {
+      chosenSide = 'left';
+    }
+  }
+
+  const activeMeasurement = chosenSide === 'right' ? right! : left!;
+
+  return {
+    activeSide: chosenSide,
+    activeMeasurement,
+    rightMeasurement: right,
+    leftMeasurement: left,
+    isOppositeLegLifted: isOpposite,
   };
 }
 
