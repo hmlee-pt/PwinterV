@@ -1,7 +1,7 @@
 # 運動員防受傷檢測系統 (Athletic Mobility & FMS Screening PWA)
 
-> **目前版本 (Current Version)**: `v1.2.1`  
-> **最後更新日期**: 2026-11-22  
+> **目前版本 (Current Version)**: `v1.2.2`  
+> **最後更新日期**: 2026-11-23  
 > **軟體形態**: Mobile Web / PWA (漸進式網頁應用，支援手機端離線使用與安裝至桌面)
 
 ---
@@ -90,6 +90,13 @@ git checkout -b restore-v1.0.0 v1.0.0
 ---
 
 ## 📝 版本更動紀錄 (CHANGELOG)
+
+### [v1.2.2] - 2026-11-23
+- **相容**：全面適配 iPhone (iOS Safari) 跨平台使用體驗，包含 iOS 13+ 陀螺儀手勢授權、1-sample Web Audio 深度喚醒與實體靜音鍵提醒。
+- **改進**：版面全面引入 `env(safe-area-inset-left)` 與 `env(safe-area-inset-right)`，完美避開 iPhone 動態島 (Dynamic Island) 與瀏海遮擋；Android 設備保持原有像素排版零影響。
+- **改進**：LINE 內建瀏覽器跨平台跳轉修正（iOS 支援 `openExternalBrowser=1` 跳轉 Safari，Android 保持 Chrome Intent）。
+- **新增**：補齊 Apple Touch Icon 與 Web App Meta，支援 Safari「加入主畫面」獨立全螢幕 App 體驗。
+- **改進**：Service Worker 快取升級為 `fms-mobility-cache-v10`。
 
 ### [v1.2.1] - 2026-11-22
 - **修復**：實作 `evaluateDualASLR` 雙腿即時夾角比對，智慧動態鎖定主動抬起腿，徹底解決側視角 MediaPipe 標籤翻轉量測到貼地腿 (1°) 的問題。

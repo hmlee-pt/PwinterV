@@ -106,6 +106,22 @@ class InclinometerSensor {
       };
     }
 
+    // 針對 iOS 13+ 裝置：若尚未觸發授權，提示使用者點擊授權
+    const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS && !this.isPermissionGranted) {
+      return {
+        isSupported: true,
+        isPermissionGranted: false,
+        isLevel: true, // 尚未授權前避免阻塞流程
+        pitch: 90,
+        roll: 0,
+        deviation: 0,
+        statusText: '點此開啟 iPhone 陀螺儀水平儀',
+        color: '#fbbf24', // 醒目黃色提示
+        isHoldingLandscape: isPhysicalLandscape,
+      };
+    }
+
     // 依據握持方向 (直立 vs 橫向) 自動切換基準軸
     let totalDeviation = 0;
     if (isLandscape) {

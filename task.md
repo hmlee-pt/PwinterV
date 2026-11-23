@@ -91,3 +91,11 @@
   - [x] 評估報告彈窗字體與版面全面大幅放大（標題 22px、FMS 32px、角度數值 38px、建議處方 15px），配合流暢上下捲動，遠距觀看清晰無礙 <!-- id: 18.4 -->
   - [x] 新增 `evaluateDualASLR` 4 組防呆自適應單元測試，總測試全數通過 (19/19) <!-- id: 18.5 -->
   - [x] 通過 Vite 生產建置，推進版本至 `v1.2.1` 並建立實體 Git Tag <!-- id: 18.6 -->
+
+- [x] **階段 19：v1.2.2 iPhone (iOS Safari) 跨平台相容性適配與動態島安全區支援** <!-- id: 19 -->
+  - [x] 實作 iOS 13+ 陀螺儀手勢直接授權機制（支援點擊相機遮罩、開始檢測與水平儀呼吸燈授權） <!-- id: 19.1 -->
+  - [x] Web Audio 導入 1-sample 靜音緩衝徹底喚醒 iOS WebKit 硬體音訊通道 <!-- id: 19.2 -->
+  - [x] 橫向與直立版面全面導入 `env(safe-area-inset-left)` 與 `env(safe-area-inset-right)`，完美避開 iPhone 動態島與瀏海 <!-- id: 19.3 -->
+  - [x] 優化 LINE 內建瀏覽器跳轉支援：iOS 採用 `openExternalBrowser=1` 跳轉 Safari，Android 保持 Chrome Intent <!-- id: 19.4 -->
+  - [x] 補齊 `<link rel="apple-touch-icon">` 與 Apple Web App Meta，新增操作指南中之 iPhone 實體靜音鍵提醒 <!-- id: 19.5 -->
+  - [x] 通過 19 項 Vitest 測試與 Vite 生產構建，推進至 `v1.2.2` 並建立實體 Git Tag <!-- id: 19.6 -->

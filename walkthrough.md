@@ -1,7 +1,7 @@
-# 實作與驗證報告 (Walkthrough) - v1.2.1
+# 實作與驗證報告 (Walkthrough) - v1.2.2
 
-> **對應專案版本**: `v1.2.1`  
-> **驗證日期**: 2026-11-22  
+> **對應專案版本**: `v1.2.2`  
+> **驗證日期**: 2026-11-23  
 > **系統名稱**: 運動員防受傷檢測系統 (Athletic Mobility & FMS Screening PWA)
 
 ---
@@ -346,3 +346,36 @@
 ### 4. 驗證結果
 - **單元測試**：新增 4 組 `evaluateDualASLR` 智慧雙腿防呆辨識測試，19 項測試全數綠燈通過。
 - **構建驗證**：Vite 生產構建成功，TypeScript 零警告零錯誤。
+
+---
+
+## 🚀 v1.2.2 重大更新成果：iPhone (iOS Safari) 跨平台相容性適配與動態島安全區支援
+
+> **對應專案版本**: `v1.2.2`  
+> **驗證日期**: 2026-11-23  
+> **發布目標**: GitHub Pages (`https://hmlee-pt.github.io/PwinterV/`)
+
+### 1. iOS 13+ 陀螺儀手勢直接授權機制 (`src/sensors.ts`, `src/main.ts`)
+- **iOS 隱私適配**：實作 `DeviceOrientationEvent.requestPermission` 手勢直接綁定。
+  - 當使用者點擊「📷 點擊啟動鏡頭」、「▶️ 開始檢測」或頂部「水平儀呼吸燈」時，直接觸發 iOS 原生權限彈窗，點選「允許」即可順暢讀取陀螺儀水平垂直角度。
+  - **Android 零影響**：Android 設備自動走原生物理通道，不出現任何權限阻礙。
+
+### 2. iPhone Web Audio 深度喚醒 (`src/audio.ts`)
+- **喚醒 iOS 音訊管線**：在使用者第一次觸控互動時，透過 Web Audio API 建立並播放極短之 1-sample 靜音緩衝，徹底激活 iOS WebKit 的硬體音訊輸出管線。
+- **實體靜音開關提示**：在操作指引彈窗中新增針對 iPhone 施測者的「🍎 iPhone 施測小訣竅」，提醒使用者檢查手機側面物理靜音撥片，確保能聽見清脆語音口令。
+
+### 3. iPhone 橫向動態島 (Dynamic Island) 與瀏海安全區適配 (`src/style.css`)
+- **四向安全邊界**：在直立與橫向模式下，全面採用 `env(safe-area-inset-left)` 與 `env(safe-area-inset-right)`：
+  `padding-left: max(16px, env(safe-area-inset-left));`
+  `padding-right: max(16px, env(safe-area-inset-right));`
+- **成果**：在 iPhone 14/15/16 Pro 等具備動態島或瀏海的機種上橫向握持施測時，頂部狀態按鈕與底部 HUD 均自動避開島體與鏡頭開孔，排版舒適無遮擋；而 Android 設備的左右安全值為 0，依然精準保持原有的 16px 邊界，完全不受影響！
+
+### 4. LINE 內建瀏覽器之 iOS Safari 專屬跳轉與 Apple Touch Icon (`src/main.ts`, `index.html`)
+- **LINE 跨平台跳轉**：
+  - 若偵測為 iOS 裝置：跳出針對 Safari 的指引，並於 URL 附加 `?openExternalBrowser=1` 參數強制跳轉系統預設 Safari。
+  - 若偵測為 Android 裝置：維持原有的 Chrome 原生 Intent 協議跳轉。
+- **PWA 原生圖示**：補齊 `<link rel="apple-touch-icon" href="./icon.svg" />` 與 `<meta name="apple-mobile-web-app-title" content="防傷檢測" />`，讓 iPhone 使用者在 Safari 點選「加入主畫面」時擁有高質感的 App 圖示與全螢幕體驗。
+
+### 5. 完整測試與建置結果
+- **單元測試 (Vitest)**：19 項力學、防呆辨識、FMS 計分與 1€ Filter 防抖測試全數 100% 通過。
+- **生產構建 (Vite)**：TypeScript 型別嚴格檢查零警告零錯誤，PWA 快取推進至 `fms-mobility-cache-v10`。

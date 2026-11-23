@@ -111,7 +111,7 @@ html, body {
   top: 0;
   left: 0;
   right: 0;
-  padding: max(10px, env(safe-area-inset-top)) 14px 8px;
+  padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 8px max(14px, env(safe-area-inset-left));
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -213,7 +213,7 @@ html, body {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 8px 16px max(14px, calc(env(safe-area-inset-bottom) + 8px));
+  padding: 8px max(16px, env(safe-area-inset-right)) max(14px, calc(env(safe-area-inset-bottom) + 8px)) max(16px, env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -346,7 +346,7 @@ html, body {
   align-items: center;
   justify-content: center;
   z-index: 100;
-  padding: 16px;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
@@ -514,7 +514,7 @@ html, body {
   }
 
   .top-bar {
-    padding: max(4px, env(safe-area-inset-top)) 16px 4px;
+    padding: max(4px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 4px max(16px, env(safe-area-inset-left));
   }
 
   .brand-badge {
@@ -534,12 +534,12 @@ html, body {
     font-size: 14px;
   }
 
-  /* 底部列重組為水平行佈局，大幅釋放中央取景視野 */
+  /* 底部列重組為水平行佈局，大幅釋放中央取景視野 (支援 iPhone 動態島與瀏海安全區) */
   .bottom-bar {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 16px max(6px, env(safe-area-inset-bottom));
+    padding: 6px max(16px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     gap: 10px;
     background: linear-gradient(to top, rgba(9, 13, 22, 0.96) 0%, rgba(9, 13, 22, 0.8) 75%, transparent 100%);
   }

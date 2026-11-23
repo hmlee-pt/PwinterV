@@ -1,5 +1,21 @@
 # 專案變更歷程 (CHANGELOG)
 
+## [v1.2.2] - 2026-11-23
+### 跨平台適配與重大相容性升級 (iOS & iPhone Compatibility)
+- **iOS 13+ 陀螺儀手勢直接授權機制**：
+  - 解決 iPhone Safari 陀螺儀隱私限制：點擊「📷 點擊啟動鏡頭」、「▶️ 開始檢測」或頂部「水平儀呼吸燈」時直接觸發 `DeviceOrientationEvent.requestPermission()`，喚出原生系統授權框，點擊允許即可讀取手持平視角度。
+  - **Android 零影響**：Android 設備直接走原生物理通道，不產生任何權限阻礙。
+- **iPhone 橫向動態島 (Dynamic Island) 與瀏海安全區適配**：
+  - 頂部狀態列與底部控制台全面引入 `env(safe-area-inset-left)` 與 `env(safe-area-inset-right)` 左右安全區補償。
+  - 在 iPhone 14/15/16 等具備動態島機種橫放施測時，按鍵與儀表自動避開島體與鏡頭開孔；Android 左右安全值為 0，保持原樣 16px 邊界。
+- **LINE 內建瀏覽器跨平台跳轉適配**：
+  - 偵測若為 iOS 裝置，自動顯示 Safari 專屬跳轉指引並支援 `openExternalBrowser=1` 外部開啟；Android 保持原生 Chrome Intent 跳轉。
+- **PWA 原生質感與 Apple Touch Icon 補齊**：
+  - 新增 `<link rel="apple-touch-icon">` 與 `<meta name="apple-mobile-web-app-title">`，iPhone 使用者點擊「加入主畫面」可享有高品質 App 圖示與全螢幕體驗。
+- **Web Audio 深度喚醒與實體靜音鍵提醒**：
+  - 觸控即播放 1-sample 靜音緩衝徹底喚醒 iOS 硬體音訊管線；於操作指引增設 iPhone 實體靜音撥片溫馨提醒。
+- **快取升級**：PWA Service Worker 快取推進至 `fms-mobility-cache-v10`。
+
 ## [v1.2.1] - 2026-11-22
 ### 重大修復與體驗強化 (Critical Bug Fixes & UX Enhancements)
 - **智慧主動腿防呆判定與自動鎖定 (`evaluateDualASLR`)**：

@@ -531,22 +531,35 @@ function runDemoSimulation() {
 
 // ----------------- 事件綁定 -----------------
 
-// 相機引導遮罩點擊啟用
+// 相機引導遮罩點擊啟用 (手勢解鎖音訊與 iOS 13+ 陀螺儀水平儀)
 if (btnStartCameraNow) {
   btnStartCameraNow.addEventListener('click', (e) => {
     e.stopPropagation();
+    inclinometerSensor.requestPermission();
+    soundManager.unlockAudio();
     startCamera();
   });
 }
 
 if (cameraPromptOverlay) {
   cameraPromptOverlay.addEventListener('click', () => {
+    inclinometerSensor.requestPermission();
+    soundManager.unlockAudio();
     startCamera();
+  });
+}
+
+// 點擊頂部水平儀呼吸燈手動觸發 iOS 陀螺儀授權
+const levelIndicatorEl = document.getElementById('level-indicator');
+if (levelIndicatorEl) {
+  levelIndicatorEl.addEventListener('click', () => {
+    inclinometerSensor.requestPermission();
   });
 }
 
 // 主要動作按鈕 (開始 / 重新檢測 / 中途終止重來)
 btnMainAction.addEventListener('click', async () => {
+  inclinometerSensor.requestPermission();
   soundManager.unlockAudio();
   const snap = stateManager.getSnapshot();
   if (snap.step === 'IDLE') {
@@ -755,17 +768,57 @@ if ('serviceWorker' in navigator) {
 function checkLineBrowser() {
   const ua = navigator.userAgent.toLowerCase();
   const isLine = ua.includes('line') || ua.includes('fban') || ua.includes('fbav');
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+
   if (isLine && lineNoticeOverlay) {
     lineNoticeOverlay.style.display = 'flex';
     lineNoticeOverlay.classList.add('active');
+
+    if (isIOS) {
+      const titleEl = lineNoticeOverlay.querySelector('h2');
+      if (titleEl) titleEl.textContent = '請切換至 Safari 瀏覽器';
+
+      const descEl = lineNoticeOverlay.querySelector('p');
+      if (descEl) {
+        descEl.innerHTML =
+          '您目前使用的是 <strong>iOS LINE 內建瀏覽器</strong>。<br />基於隱私權限限制，LINE 會<strong>封鎖相機功能</strong>導致檢測無法運作。';
+      }
+
+      const stepsBox = lineNoticeOverlay.querySelector('div > div:nth-child(3)');
+      if (stepsBox) {
+        stepsBox.innerHTML = `
+          <strong>如何開啟相機（只需 3 秒）：</strong><br />
+          1. 點擊本畫面<strong>最右下角「⋯」</strong>（或「🔗」分享圖示）。<br />
+          2. 選擇<strong>「以預設瀏覽器開啟」</strong>（或「在 Safari 中開啟」）。<br />
+          3. 在 Safari 中點選「允許」取用相機即可開始檢測！
+        `;
+      }
+
+      if (btnOpenChrome) {
+        btnOpenChrome.textContent = '🌐 點擊嘗試以 Safari 瀏覽器開啟';
+      }
+    }
   }
 }
 
 if (btnOpenChrome) {
   btnOpenChrome.addEventListener('click', () => {
+    const ua = navigator.userAgent.toLowerCase();
+    const isIOS = /iphone|ipad|ipod/.test(ua);
     const rawUrl = window.location.href.split('#')[0];
-    const cleanUrl = rawUrl.replace(/^https?:\/\//, '');
-    window.location.href = `intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;end`;
+
+    if (isIOS) {
+      // iOS LINE 專用跳轉參數 openExternalBrowser=1
+      const separator = rawUrl.includes('?') ? '&' : '?';
+      const safariUrl = rawUrl.includes('openExternalBrowser=1')
+        ? rawUrl
+        : `${rawUrl}${separator}openExternalBrowser=1`;
+      window.location.href = safariUrl;
+    } else {
+      // Android 專用 Intent 語法保持不變
+      const cleanUrl = rawUrl.replace(/^https?:\/\//, '');
+      window.location.href = `intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;end`;
+    }
   });
 }
 

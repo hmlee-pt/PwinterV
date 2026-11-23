@@ -126,6 +126,14 @@ class SoundManager {
       if (ctx && ctx.state === 'suspended') {
         ctx.resume();
       }
+      // iOS WebKit: 建立並播放極短之 1-sample 靜音緩衝，徹底喚醒 iOS 硬體音訊管線
+      if (ctx && ctx.state === 'running') {
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+      }
     } catch {}
 
     // 2. 解鎖 Web Speech Synthesis (修復 Android Chrome 假死狀態)
